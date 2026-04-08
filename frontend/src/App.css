@@ -1,0 +1,209 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0f0f13;
+  color: #e2e2e2;
+  min-height: 100vh;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #1e1e2e;
+  background: #0f0f13;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.navbar-brand {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.brand-rag { color: #7c6afc; }
+.brand-bench { color: #e2e2e2; }
+
+.navbar-tabs { display: flex; gap: 0.5rem; }
+
+.tab-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: #888;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+}
+
+.tab-btn:hover { color: #e2e2e2; border-color: #2e2e3e; }
+.tab-btn.active { color: #7c6afc; border-color: #7c6afc; background: #7c6afc15; }
+
+.main-content { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.page h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.3rem; }
+.subtitle { color: #888; font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+.upload-box, .query-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.file-input { color: #888; font-size: 0.9rem; }
+.file-name { color: #7c6afc; font-size: 0.85rem; }
+
+.query-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #1a1a24;
+  border: 1px solid #2e2e3e;
+  border-radius: 8px;
+  color: #e2e2e2;
+  font-size: 0.95rem;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.query-input:focus { border-color: #7c6afc; }
+
+.query-controls { display: flex; gap: 0.75rem; }
+
+.model-select {
+  background: #1a1a24;
+  border: 1px solid #2e2e3e;
+  color: #e2e2e2;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #7c6afc;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.card {
+  background: #1a1a24;
+  border: 1px solid #2e2e3e;
+  border-radius: 10px;
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.card.success { border-color: #2a6e3f; }
+.card.error { border-color: #6e2a2a; color: #e87878; }
+
+.answer-meta {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+.model-tag {
+  background: #7c6afc20;
+  color: #7c6afc;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.score-tag { color: #888; font-size: 0.8rem; }
+.answer-text { line-height: 1.6; font-size: 0.95rem; }
+
+.chunk-viewer { margin-top: 1rem; }
+
+.toggle-chunks {
+  background: none;
+  border: 1px solid #2e2e3e;
+  color: #888;
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.toggle-chunks:hover { color: #e2e2e2; }
+
+.chunks-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
+
+.chunk-card {
+  background: #13131c;
+  border: 1px solid #2e2e3e;
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+
+.chunk-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.chunk-source { color: #7c6afc; font-size: 0.8rem; }
+.chunk-score { color: #888; font-size: 0.8rem; }
+.chunk-text { font-size: 0.85rem; color: #aaa; line-height: 1.5; }
+
+.model-toggles { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.toggle-btn {
+  background: none;
+  border: 1px solid #2e2e3e;
+  color: #888;
+  padding: 0.35rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.15s;
+}
+
+.toggle-btn.active {
+  border-color: #7c6afc;
+  color: #7c6afc;
+  background: #7c6afc15;
+}
+
+.comparison { margin-top: 1rem; }
+.chunks-used { color: #888; font-size: 0.85rem; margin-bottom: 1rem; }
+
+.answers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.metrics-table th, .metrics-table td {
+  padding: 0.65rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #1e1e2e;
+}
+
+.metrics-table th { color: #888; font-weight: 500; }
+.metrics-table td:first-child { color: #aaa; }
+.best-score { color: #5dcaa5; font-weight: 600; }
