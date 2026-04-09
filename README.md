@@ -1,46 +1,77 @@
-RagBench
-Production-grade RAG Evaluation Platform for Academic Research Papers
-Show Image
-Show Image
-Show Image
-Show Image
-Show Image
-Show Image
+
+
+# RagBench
+
+**Production-grade RAG Evaluation Platform for Academic Research Papers**
+
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5-FF6B35?style=flat)](https://trychroma.com)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://docker.com)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
+
 </div>
 
-Why RagBench?
-Most RAG demos just show that retrieval works. RagBench measures how well it works.
-FeatureRagBenchBasic RAG demoMulti-model parallel generation✅❌RAG-aware metrics (precision, faithfulness)✅❌Retrieval debugger (chunk scores visible)✅❌Side-by-side model comparison✅❌Production architecture (layered services)✅❌
-Built to answer a real question: given the same retrieved context, which LLM produces the most faithful, relevant answer?
+---
 
-What it does
-Single /evaluate endpoint runs the full pipeline:
+## Why RagBench?
+
+Most RAG demos just show that retrieval works. RagBench measures *how well* it works.
+
+| Feature | RagBench | Basic RAG demo |
+|---|---|---|
+| Multi-model parallel generation | ✅ | ❌ |
+| RAG-aware metrics (precision, faithfulness) | ✅ | ❌ |
+| Retrieval debugger (chunk scores visible) | ✅ | ❌ |
+| Side-by-side model comparison | ✅ | ❌ |
+| Production architecture (layered services) | ✅ | ❌ |
+
+Built to answer a real question: **given the same retrieved context, which LLM produces the most faithful, relevant answer?**
+
+---
+
+## What it does
+
+Single `/evaluate` endpoint runs the full pipeline:
+
+```
 Upload PDF → Chunk → Embed → ChromaDB
                                 ↓
 Query → Vector Search → Context → LLM Router → parallel generation
                                                       ↓
                                               Evaluation Engine
                                               (per model, per query)
+```
+
 Metrics computed per model per query:
 
-Context Precision — what fraction of retrieved chunks actually support the answer
-Context Recall — how much of the ground truth is covered by retrieved context
-Faithfulness — how grounded the answer is in retrieved chunks (not hallucinated)
-Answer Relevancy — semantic similarity between query and final answer
+- **Context Precision** — what fraction of retrieved chunks actually support the answer
+- **Context Recall** — how much of the ground truth is covered by retrieved context
+- **Faithfulness** — how grounded the answer is in retrieved chunks (not hallucinated)
+- **Answer Relevancy** — semantic similarity between query and final answer
 
+---
 
-Screenshots
-Upload
+## Screenshots
+
+### Upload
 <!-- SS: upload a PDF, show "Ingested successfully — chunks: 47" success card -->
-Show Image
-Query
-<!-- SS: question typed, phi3 selected, answer card visible, chunk viewer expanded -->
-Show Image
-Evaluation — multi-model comparison
-<!-- SS: same query across phi3 + mistral + gemini, metrics table with green best-score highlights -->
-Show Image
+![Upload](docs/screenshots/upload.png)
 
-Architecture
+### Query
+<!-- SS: question typed, phi3 selected, answer card visible, chunk viewer expanded -->
+![Query](docs/screenshots/query.png)
+
+### Evaluation — multi-model comparison
+<!-- SS: same query across phi3 + mistral + gemini, metrics table with green best-score highlights -->
+![Evaluate](docs/screenshots/evaluate.png)
+
+---
+
+## Architecture
+
+```
 ┌─────────────────────────────────────────────┐
 │  Frontend  (React + Vite, port 3000)        │
 └───────────────────┬─────────────────────────┘
@@ -69,39 +100,88 @@ Infrastructure:
   Ollama    → Mac native        (port 11434, accessed via host.docker.internal)
   API       → Docker container  (port 8000)
   Frontend  → Docker container  (port 3000)
+```
 
-Tech Stack
-LayerTechnologyAPIFastAPI, Pydantic v2, UvicornVector DBChromaDB (persistent, cosine similarity)Embeddingssentence-transformers all-MiniLM-L6-v2Local LLMsOllama — phi3, mistral (native on host)Cloud LLMGemini 1.5 FlashEvaluationCustom RAG metrics, semantic similarityFrontendReact 18, Vite, AxiosDeploymentDocker Compose
+---
 
-Setup
-Prerequisites
+## Tech Stack
 
-Docker + Docker Compose
-Ollama installed and running natively on your machine
-Gemini API key (free tier works fine)
+| Layer | Technology |
+|---|---|
+| API | FastAPI, Pydantic v2, Uvicorn |
+| Vector DB | ChromaDB (persistent, cosine similarity) |
+| Embeddings | sentence-transformers `all-MiniLM-L6-v2` |
+| Local LLMs | Ollama — phi3, mistral (native on host) |
+| Cloud LLM | Gemini 1.5 Flash |
+| Evaluation | Custom RAG metrics, semantic similarity |
+| Frontend | React 18, Vite, Axios |
+| Deployment | Docker Compose |
 
-1 — Pull Ollama models (on your Mac, not Docker)
-bashollama pull phi3
+---
+
+## Setup
+
+### Prerequisites
+
+- Docker + Docker Compose
+- [Ollama](https://ollama.ai) installed and running natively on your machine
+- Gemini API key (free tier works fine)
+
+### 1 — Pull Ollama models (on your Mac, not Docker)
+
+```bash
+ollama pull phi3
 ollama pull mistral
+```
+
 Verify Ollama is running:
-bashollama list
-2 — Clone and configure
-bashgit clone https://github.com/VanshikaLud04/ragbench
+
+```bash
+ollama list
+```
+
+### 2 — Clone and configure
+
+```bash
+git clone https://github.com/VanshikaLud04/ragbench
 cd ragbench
 cp .env.example .env
-Edit .env:
-dotenvCHROMA_PORT=8001
+```
+
+Edit `.env`:
+
+```dotenv
+CHROMA_PORT=8001
 OLLAMA_HOST=http://host.docker.internal:11434
 GEMINI_API_KEY=your_key_here
-3 — Start
-bashdocker compose up --build
-ServiceURLFrontendhttp://localhost:3000APIhttp://localhost:8000API Docshttp://localhost:8000/docsChromaDBhttp://localhost:8001
-Local dev (without Docker)
-bashpython -m venv venv && source venv/bin/activate
+```
+
+### 3 — Start
+
+```bash
+docker compose up --build
+```
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| API | http://localhost:8000 |
+| API Docs | http://localhost:8000/docs |
+| ChromaDB | http://localhost:8001 |
+
+### Local dev (without Docker)
+
+```bash
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 uvicorn backend.main:app --reload
+```
 
-Project Structure
+---
+
+## Project Structure
+
+```
 ragbench/
 ├── backend/
 │   ├── main.py
@@ -129,16 +209,34 @@ ragbench/
 ├── Dockerfile
 ├── requirements.txt
 └── .env.example
+```
 
-API Reference
-MethodEndpointDescriptionPOST/ingest/Upload and ingest a PDFPOST/query/RAG query with single modelPOST/evaluate/Multi-model eval with full metricsGET/health/Health check
-Full interactive docs at http://localhost:8000/docs
+---
 
-Roadmap
+## API Reference
 
- ARES / Ragas integration for standardised eval scores
- LangGraph agentic retrieval (multi-hop queries)
- Experiment tracking — save and compare eval runs over time
- Support for more file types (DOCX, TXT, MD)
- OpenAI GPT-4o as additional model option
- Automated dataset generation from uploaded papers
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/ingest/` | Upload and ingest a PDF |
+| `POST` | `/query/` | RAG query with single model |
+| `POST` | `/evaluate/` | Multi-model eval with full metrics |
+| `GET` | `/health/` | Health check |
+
+Full interactive docs at `http://localhost:8000/docs`
+
+---
+
+## Roadmap
+
+- [ ] ARES / Ragas integration for standardised eval scores
+- [ ] LangGraph agentic retrieval (multi-hop queries)
+- [ ] Experiment tracking — save and compare eval runs over time
+- [ ] Support for more file types (DOCX, TXT, MD)
+- [ ] OpenAI GPT-4o as additional model option
+- [ ] Automated dataset generation from uploaded papers
+
+---
+
+## License
+
+MIT
