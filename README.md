@@ -1,17 +1,13 @@
-
-
 # RagBench
 
 **Production-grade RAG Evaluation Platform for Academic Research Papers**
 
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5-FF6B35?style=flat)](https://trychroma.com)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://docker.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
-
-</div>
 
 ---
 
@@ -56,16 +52,18 @@ Metrics computed per model per query:
 ## Screenshots
 
 ### Upload
-<!-- SS: upload a PDF, show "Ingested successfully — chunks: 47" success card -->
-![Upload](docs/screenshots/upload.png)
+<img width="1460" height="419" alt="Pasted Graphic 1" src="https://github.com/user-attachments/assets/639a6d82-2c0e-4509-93a1-f8ee8c174d52" />
+
 
 ### Query
-<!-- SS: question typed, phi3 selected, answer card visible, chunk viewer expanded -->
-![Query](docs/screenshots/query.png)
+<img width="1470" height="824" alt="Pasted Graphic" src="https://github.com/user-attachments/assets/dda5dd7a-e18c-41a3-9661-042c570164f4" />
+
 
 ### Evaluation — multi-model comparison
-<!-- SS: same query across phi3 + mistral + gemini, metrics table with green best-score highlights -->
-![Evaluate](docs/screenshots/evaluate.png)
+<img width="1470" height="355" alt="Pasted Graphic 1" src="https://github.com/user-attachments/assets/24064537-0f67-452d-b129-b30fc061da80" />
+
+
+> **Note:** Local model evaluation (phi3, mistral) requires 16GB+ RAM for concurrent multi-model generation. Screenshots were captured using Gemini due to hardware constraints during development. The full pipeline runs correctly with all models in a sufficiently resourced environment.
 
 ---
 
@@ -86,7 +84,7 @@ Metrics computed per model per query:
 │  PDF parse  │ │  Retriever │ │   Router   │
 │  Chunk+Embed│ │  Context   │ │ phi3       │
 │  ChromaDB   │ │  Builder   │ │ mistral    │
-└─────────────┘ └────────────┘ │ gemini-1.5 │
+└─────────────┘ └────────────┘ │ gemini-2.0 │
                                └─────┬──────┘
                           ┌──────────▼───────┐
                           │  Evaluation      │
@@ -96,10 +94,10 @@ Metrics computed per model per query:
                           └──────────────────┘
 
 Infrastructure:
-  ChromaDB  → Docker container  (port 8001)
-  Ollama    → Mac native        (port 11434, accessed via host.docker.internal)
-  API       → Docker container  (port 8000)
-  Frontend  → Docker container  (port 3000)
+  ChromaDB  → persistent HTTP server  (port 8001)
+  Ollama    → Mac native              (port 11434)
+  API       → Uvicorn / Docker        (port 8000)
+  Frontend  → Vite / Docker           (port 3000)
 ```
 
 ---
@@ -111,8 +109,8 @@ Infrastructure:
 | API | FastAPI, Pydantic v2, Uvicorn |
 | Vector DB | ChromaDB (persistent, cosine similarity) |
 | Embeddings | sentence-transformers `all-MiniLM-L6-v2` |
-| Local LLMs | Ollama — phi3, mistral (native on host) |
-| Cloud LLM | Gemini 1.5 Flash |
+| Local LLMs | Ollama — phi3, mistral |
+| Cloud LLM | Gemini 2.0 Flash |
 | Evaluation | Custom RAG metrics, semantic similarity |
 | Frontend | React 18, Vite, Axios |
 | Deployment | Docker Compose |
@@ -123,18 +121,18 @@ Infrastructure:
 
 ### Prerequisites
 
-- Docker + Docker Compose
-- [Ollama](https://ollama.ai) installed and running natively on your machine
-- Gemini API key (free tier works fine)
+- Docker + Docker Compose (optional, for containerised setup)
+- [Ollama](https://ollama.ai) installed and running natively
+- Gemini API key — free tier at [aistudio.google.com](https://aistudio.google.com)
 
-### 1 — Pull Ollama models (on your Mac, not Docker)
+### 1 — Pull Ollama models
 
 ```bash
 ollama pull phi3
 ollama pull mistral
 ```
 
-Verify Ollama is running:
+Verify:
 
 ```bash
 ollama list
@@ -151,15 +149,35 @@ cp .env.example .env
 Edit `.env`:
 
 ```dotenv
+CHROMA_HOST=localhost
 CHROMA_PORT=8001
-OLLAMA_HOST=http://host.docker.internal:11434
+OLLAMA_HOST=http://localhost:11434
 GEMINI_API_KEY=your_key_here
 ```
 
-### 3 — Start
+> If running inside Docker, use `OLLAMA_HOST=http://host.docker.internal:11434` and `CHROMA_HOST=chromadb`.
+
+### 3 — Start ChromaDB
 
 ```bash
-docker compose up --build
+chroma run --host localhost --port 8001 --path ./chroma_data
+```
+
+### 4 — Start the API
+
+```bash
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cd ragbench
+uvicorn backend.main:app --reload
+```
+
+### 5 — Start the frontend
+
+```bash
+cd ragbench/frontend/frontend
+npm install
+npm run dev
 ```
 
 | Service | URL |
@@ -169,12 +187,10 @@ docker compose up --build
 | API Docs | http://localhost:8000/docs |
 | ChromaDB | http://localhost:8001 |
 
-### Local dev (without Docker)
+### Docker (full stack)
 
 ```bash
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-uvicorn backend.main:app --reload
+docker compose up --build
 ```
 
 ---
@@ -187,7 +203,7 @@ ragbench/
 │   ├── main.py
 │   ├── core/
 │   │   ├── config.py          # Pydantic settings, env vars
-│   │   └── database.py        # ChromaDB client
+│   │   └── database.py        # ChromaDB HttpClient
 │   ├── api/
 │   │   ├── routes/            # ingest, query, evaluate, health
 │   │   └── schemas/           # request + response models
@@ -197,14 +213,10 @@ ragbench/
 │       ├── llm/               # router, ollama client, gemini client
 │       └── evaluation/        # evaluator, metrics
 ├── frontend/
-│   └── src/
-│       ├── pages/             # Upload, Query, Evaluate
-│       └── components/        # Navbar, ChunkViewer, ComparisonTable
-├── tests/
-│   ├── test_rag.py
-│   └── test_evaluation.py
-├── scripts/
-│   └── pull_models.sh
+│   └── frontend/
+│       └── src/
+│           ├── pages/         # Upload, Query, Evaluate
+│           └── components/    # Navbar, ChunkViewer, ComparisonTable
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
@@ -223,6 +235,14 @@ ragbench/
 | `GET` | `/health/` | Health check |
 
 Full interactive docs at `http://localhost:8000/docs`
+
+---
+
+## Known Limitations
+
+- Concurrent local model evaluation (phi3 + mistral simultaneously) requires 16GB+ RAM
+- ChromaDB must be running as a separate HTTP server before starting the API
+- Gemini model name must match the current `google-genai` SDK — currently `gemini-2.0-flash`
 
 ---
 
