@@ -46,6 +46,7 @@ Metrics computed per model per query:
 - **Context Recall** — how much of the ground truth is covered by retrieved context
 - **Faithfulness** — how grounded the answer is in retrieved chunks (not hallucinated)
 - **Answer Relevancy** — semantic similarity between query and final answer
+- **Agentic self-critique** — Gemini evaluates its own answer for hallucination and autonomously retries with a stricter prompt if needed
 
 ---
 
@@ -249,7 +250,6 @@ Full interactive docs at `http://localhost:8000/docs`
 ## Roadmap
 
 - [ ] ARES / Ragas integration for standardised eval scores
-- [ ] LangGraph agentic retrieval (multi-hop queries)
 - [ ] Experiment tracking — save and compare eval runs over time
 - [ ] Support for more file types (DOCX, TXT, MD)
 - [ ] OpenAI GPT-4o as additional model option
