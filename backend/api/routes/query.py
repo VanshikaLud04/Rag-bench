@@ -16,10 +16,10 @@ async def query_rag(request: QueryRequest = Body(...)):
     chunks = retriever.retrieve(
         query=request.query, 
         top_k=request.top_k, 
-        strategy=request.strategy
+        strategy=request.strategy or "dense"
     )
     context = context_builder.build(request.query, chunks)
-    answer = await llm_router.generate(context.formatted_context, model=request.model)
+    answer = await llm_router.generate(context.formatted_context, model=request.model or "phi3")
 
     return {
         "query": request.query,
