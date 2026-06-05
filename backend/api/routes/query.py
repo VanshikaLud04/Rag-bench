@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Body
-from pydantic import BaseModel
+
 from typing import Optional
 from ...services.rag.retriever import Retriever
 from ...services.rag.context_builder import ContextBuilder
@@ -11,10 +11,7 @@ retriever = Retriever()
 context_builder = ContextBuilder()
 llm_router = LLMRouter()
 
-class QueryRequest(BaseModel):
-    query: str
-    model: Optional[str] = "phi3"
-    top_k: Optional[int] = None
+
 
 @router.post("/")
 async def query_rag(request: QueryRequest = Body(...)):
