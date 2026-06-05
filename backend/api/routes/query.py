@@ -4,6 +4,7 @@ from typing import Optional
 from ...services.rag.retriever import Retriever
 from ...services.rag.context_builder import ContextBuilder
 from ...services.llm.router import LLMRouter
+from ..schemas.requests import QueryRequest
 
 router = APIRouter()
 retriever = Retriever()

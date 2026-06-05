@@ -3,7 +3,7 @@
 **Production-grade RAG Evaluation Platform for Academic Research Papers**
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5-FF6B35?style=flat)](https://trychroma.com)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://docker.com)
@@ -21,6 +21,7 @@ Most RAG demos just show that retrieval works. RagBench measures *how well* it w
 | RAG-aware metrics (precision, faithfulness) | ✅ | ❌ |
 | Retrieval debugger (chunk scores visible) | ✅ | ❌ |
 | Side-by-side model comparison | ✅ | ❌ |
+| Hybrid Search (Dense + Sparse BM25 + RRF) | ✅ | ❌ |
 | Production architecture (layered services) | ✅ | ❌ |
 
 Built to answer a real question: **given the same retrieved context, which LLM produces the most faithful, relevant answer?**
@@ -32,9 +33,9 @@ Built to answer a real question: **given the same retrieved context, which LLM p
 Single `/evaluate` endpoint runs the full pipeline:
 
 ```
-Upload PDF → Chunk → Embed → ChromaDB
+Upload PDF → Chunk → Embed → ChromaDB (Dense + Sparse Index)
                                 ↓
-Query → Vector Search → Context → LLM Router → parallel generation
+Query → Hybrid Search (Dense/Sparse/Hybrid) → Context → LLM Router → parallel generation
                                                       ↓
                                               Evaluation Engine
                                               (per model, per query)
@@ -83,9 +84,10 @@ Metrics computed per model per query:
 ┌──────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐
 │  Ingestion  │ │    RAG     │ │    LLM     │
 │  PDF parse  │ │  Retriever │ │   Router   │
-│  Chunk+Embed│ │  Context   │ │ phi3       │
-│  ChromaDB   │ │  Builder   │ │ mistral    │
-└─────────────┘ └────────────┘ │ gemini-2.0 │
+│  Chunk+Embed│ │  Dense     │ │ phi3       │
+│  ChromaDB   │ │  Sparse    │ │ mistral    │
+│             │ │  Hybrid    │ │ gemini-2.0 │
+└─────────────┘ └────────────┘ │            │
                                └─────┬──────┘
                           ┌──────────▼───────┐
                           │  Evaluation      │
@@ -108,7 +110,8 @@ Infrastructure:
 | Layer | Technology |
 |---|---|
 | API | FastAPI, Pydantic v2, Uvicorn |
-| Vector DB | ChromaDB (persistent, cosine similarity) |
+| Vector DB | ChromaDB (persistent, dense vector storage) |
+| Search Strategies | Dense Vector, Sparse (BM25), Hybrid (RRF) |
 | Embeddings | sentence-transformers `all-MiniLM-L6-v2` |
 | Local LLMs | Ollama — phi3, mistral |
 | Cloud LLM | Gemini 2.0 Flash |
@@ -231,8 +234,8 @@ ragbench/
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/ingest/` | Upload and ingest a PDF |
-| `POST` | `/query/` | RAG query with single model |
-| `POST` | `/evaluate/` | Multi-model eval with full metrics |
+| `POST` | `/query/` | RAG query with single model. Accepts optional `strategy` param (`dense`, `sparse`, `hybrid`) |
+| `POST` | `/evaluate/` | Multi-model eval with full metrics. Accepts optional `strategy` param |
 | `GET` | `/health/` | Health check |
 
 Full interactive docs at `http://localhost:8000/docs`
