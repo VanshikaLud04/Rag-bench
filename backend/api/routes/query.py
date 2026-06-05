@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Body
-
-from typing import Optional
 from ...services.rag.retriever import Retriever
 from ...services.rag.context_builder import ContextBuilder
 from ...services.llm.router import LLMRouter

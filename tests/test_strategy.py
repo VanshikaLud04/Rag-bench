@@ -3,9 +3,9 @@ from unittest.mock import MagicMock
 # Mock rank_bm25 before importing anything that uses it
 sys.modules['rank_bm25'] = MagicMock()
 
-import pytest
+
 from unittest.mock import patch
-from backend.services.rag.retriever import Retriever, RetrievedChunk
+from backend.services.rag.retriever import Retriever
 
 @patch('backend.services.rag.retriever.VectorStore')
 @patch('backend.services.rag.retriever.Embedder')
