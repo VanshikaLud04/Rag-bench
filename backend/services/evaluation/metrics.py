@@ -4,6 +4,7 @@ import logging
 from typing import List
 from functools import lru_cache
 from sentence_transformers import SentenceTransformer, util
+from rouge_score import rouge_scorer
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,14 @@ async def compute_faithfulness(answer: str, context_texts: List[str]) -> float:
 
 
 async def compute_answer_relevancy(query: str, answer: str) -> float:
-
     q_emb = await _encode(query)
     a_emb = await _encode(answer)
     return float(util.cos_sim(q_emb, a_emb))
+
+def compute_answer_relevancy_rouge(answer: str, ground_truth: str) -> float:
+    """Computes ROUGE-L f-measure between the answer and ground truth."""
+    if not answer or not ground_truth:
+        return 0.0
+    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    scores = scorer.score(ground_truth, answer)
+    return scores['rougeL'].fmeasure

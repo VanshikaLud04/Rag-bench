@@ -43,3 +43,8 @@ class VectorStore:
 
     def delete_by_doc_id(self, doc_id: str) -> None:
         self.collection.delete(where={"doc_id": doc_id})
+
+    def get_all(self) -> Dict:
+        return self.collection.get(
+            include=["documents", "metadatas"]
+        )

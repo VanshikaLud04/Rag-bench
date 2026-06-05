@@ -5,7 +5,7 @@ from .metrics import (
     compute_context_precision,
     compute_context_recall,
     compute_faithfulness,
-    compute_answer_relevancy
+    compute_answer_relevancy_rouge
 )
 
 @dataclass
@@ -28,10 +28,14 @@ class EvaluatorService:
         ground_truth: Optional[str] = None,
         model: str = "unknown"
     ) -> EvaluationResult:
-        ctx_precision = compute_context_precision(retrieved_chunks, answer)
-        ctx_recall = compute_context_recall(retrieved_chunks, ground_truth) if ground_truth else 0.0
+        ctx_precision = await compute_context_precision(retrieved_chunks, answer)
+        ctx_recall = await compute_context_recall(retrieved_chunks, ground_truth) if ground_truth else 0.0
         faithfulness = await compute_faithfulness(answer, [c.text for c in retrieved_chunks])
-        relevancy = compute_answer_relevancy(query, answer)
+        
+        if ground_truth:
+            relevancy = compute_answer_relevancy_rouge(answer, ground_truth)
+        else:
+            relevancy = 0.0
 
         mean_score = (
             sum(c.score for c in retrieved_chunks) / len(retrieved_chunks)

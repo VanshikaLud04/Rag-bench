@@ -17,7 +17,11 @@ class QueryRequest(BaseModel):
 
 @router.post("/")
 async def query_rag(request: QueryRequest = Body(...)):
-    chunks = retriever.retrieve(request.query, top_k=request.top_k)
+    chunks = retriever.retrieve(
+        query=request.query, 
+        top_k=request.top_k, 
+        strategy=request.strategy
+    )
     context = context_builder.build(request.query, chunks)
     answer = await llm_router.generate(context.formatted_context, model=request.model)
 
@@ -25,6 +29,7 @@ async def query_rag(request: QueryRequest = Body(...)):
         "query": request.query,
         "answer": answer,
         "model": request.model,
+        "strategy": request.strategy,
         "chunks_used": len(chunks),
         "mean_retrieval_score": context.mean_score,
         "retrieved_chunks": [

@@ -1,0 +1,14 @@
+[
+  {
+    "query": "What is the capital of France?",
+    "ground_truth": "The capital of France is Paris."
+  },
+  {
+    "query": "Explain quantum computing briefly.",
+    "ground_truth": "Quantum computing uses quantum bits or qubits to perform calculations at speeds exponentially faster than classical computers for certain tasks."
+  },
+  {
+    "query": "Who wrote Hamlet?",
+    "ground_truth": "William Shakespeare wrote the play Hamlet."
+  }
+]

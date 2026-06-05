@@ -10,6 +10,7 @@ class QueryResponse(BaseModel):
     query: str
     answer: str
     model: str
+    strategy: str
     chunks_used: int
     mean_retrieval_score: float
     retrieved_chunks: List[ChunkResponse]
@@ -25,6 +26,7 @@ class ModelEvalResult(BaseModel):
 
 class EvaluateResponse(BaseModel):
     query: str
+    strategy: str
     retrieved_chunks_count: int
     results: List[ModelEvalResult]
 

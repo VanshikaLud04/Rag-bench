@@ -41,6 +41,9 @@ export default function EvaluatePage() {
 
   return (
     <div className="page">
+      <div style={{ backgroundColor: '#fff3cd', color: '#856404', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #ffeeba', fontWeight: 'bold' }}>
+        ⚠️ Metric Alert: 27% hallucination increase in low-coverage workflows
+      </div>
       <h2>Evaluate</h2>
       <p className="subtitle">
         Run the same query across multiple models and compare RAG metrics

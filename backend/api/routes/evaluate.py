@@ -17,7 +17,11 @@ evaluator = EvaluatorService()
 async def evaluate_rag(request: EvaluateRequest = Body(...)):
     models = request.models or ["phi3", "mistral"]
     
-    chunks = retriever.retrieve(request.query, top_k=request.top_k)
+    chunks = retriever.retrieve(
+        query=request.query, 
+        top_k=request.top_k, 
+        strategy=request.strategy
+    )
     context = context_builder.build(request.query, chunks)
 
     tasks = [
@@ -49,6 +53,7 @@ async def evaluate_rag(request: EvaluateRequest = Body(...)):
 
     return {
         "query": request.query,
+        "strategy": request.strategy,
         "retrieved_chunks_count": len(chunks),
         "results": results
     }
