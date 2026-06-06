@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5-FF6B35?style=flat)](https://trychroma.com)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://docker.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
@@ -113,11 +113,11 @@ Infrastructure:
 | Vector DB | ChromaDB (persistent, dense vector storage) |
 | Search Strategies | Dense Vector, Sparse (BM25), Hybrid (RRF) |
 | Embeddings | sentence-transformers `all-MiniLM-L6-v2` |
-| Local LLMs | Ollama — phi3, mistral |
-| Cloud LLM | Gemini 2.0 Flash |
-| Evaluation | Custom RAG metrics, semantic similarity |
-| Frontend | React 18, Vite, Axios |
-| Deployment | Docker Compose |
+| Local LLMs | Ollama — phi3, mistral, llama3.2 |
+| Cloud LLM | Gemini 1.5 Flash (default) |
+| Evaluation | Custom RAG metrics, semantic similarity, rouge-score |
+| Frontend | React 19, Vite, Axios |
+| Deployment | Docker Compose, Railway |
 
 ---
 
@@ -221,11 +221,32 @@ ragbench/
 │       └── src/
 │           ├── pages/         # Upload, Query, Evaluate
 │           └── components/    # Navbar, ChunkViewer, ComparisonTable
+├── scripts/                   # Helper scripts (e.g., pull_models.sh)
+├── tests/                     # Pytest test cases for RAG, strategies, and eval
+├── data/                      # Local data storage directory
 ├── docker-compose.yml
 ├── Dockerfile
+├── railway.json               # Railway deployment configuration
 ├── requirements.txt
 └── .env.example
 ```
+
+---
+
+## Testing
+
+Run the backend tests using `pytest` (ensure you have it installed):
+
+```bash
+pip install pytest
+pytest tests/
+```
+
+---
+
+## Deployment
+
+In addition to Docker Compose, the repository includes a `railway.json` file for out-of-the-box deployment to [Railway](https://railway.app/).
 
 ---
 
@@ -246,7 +267,7 @@ Full interactive docs at `http://localhost:8000/docs`
 
 - Concurrent local model evaluation (phi3 + mistral simultaneously) requires 16GB+ RAM
 - ChromaDB must be running as a separate HTTP server before starting the API
-- Gemini model name must match the current `google-genai` SDK — currently `gemini-2.0-flash`
+- Gemini model name must match the current SDK and config — currently configured as `gemini-1.5-flash`
 
 ---
 
