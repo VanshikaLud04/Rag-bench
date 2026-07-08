@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
 
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
+    redis_url: str = Field(default="redis://redis:6379", env="REDIS_URL")
 
     class Config:
         env_file = ".env"

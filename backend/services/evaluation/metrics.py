@@ -47,22 +47,25 @@ async def compute_context_recall(chunks, ground_truth: str) -> float:
 
 async def compute_faithfulness(answer: str, context_texts: List[str]) -> float:
     """
-    LLM-as-judge: asks the local Ollama model whether the answer is
-    grounded in the retrieved context.  Falls back to embedding overlap
-    if the LLM call fails (network / model not pulled yet).
+    LLM-as-judge: asks the GPT-4o judge or local Ollama model whether the answer is
+    grounded in the retrieved context. Falls back to embedding overlap if LLM calls fail.
     """
     if not context_texts:
         return 0.0
 
     from ...core.config import settings
+    from .judge import LLMJudge
+    
+    # Try GPT-4o Judge first
+    judge = LLMJudge()
+    score = await judge.evaluate_faithfulness(answer, context_texts)
+    if score is not None:
+        return score
 
-    context_blob = "\n\n".join(context_texts[:3])
-    prompt = (
-        f"Context:\n{context_blob}\n\n"
-        f"Answer: {answer}\n\n"
-        "Is this answer completely derived from the context above? "
-        "Reply with YES or NO only, nothing else."
-    )
+    # Fallback to Ollama
+    from ...core.prompts import PromptManager
+    context_blob = "\\n\\n".join(context_texts[:3])
+    prompt, _ = PromptManager.get_prompt("judge_faithfulness", context=context_blob, answer=answer)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -76,11 +79,10 @@ async def compute_faithfulness(answer: str, context_texts: List[str]) -> float:
             )
             resp.raise_for_status()
             verdict = resp.json()["response"].strip().upper()
-            logger.info("Faithfulness LLM verdict: %s", verdict)
+            logger.info("Faithfulness Ollama verdict: %s", verdict)
             return 1.0 if verdict.startswith("YES") else 0.0
 
     except Exception as exc:
-
         logger.warning("LLM-as-judge failed (%s), falling back to embeddings.", exc)
         answer_emb = await _encode(answer)
         scores = []

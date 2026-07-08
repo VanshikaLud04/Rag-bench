@@ -16,10 +16,52 @@ export default function QueryPage() {
     const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
     try {
-      const res = await axios.post(`${API_BASE_URL}/query/`, { query, model })
-      setResult(res.data)
+      const res = await fetch(`${API_BASE_URL}/query/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, model })
+      });
+
+      if (!res.ok) {
+        throw new Error("Query failed");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      
+      let answerText = "";
+      let buffer = "";
+
+      setResult({ answer: "", model: model });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        
+        const lines = buffer.split("\\n\\n");
+        buffer = lines.pop();
+        
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const dataStr = line.substring(6);
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.type === "token") {
+                answerText += data.content;
+                setResult(prev => ({ ...prev, answer: answerText }));
+              } else if (data.type === "metadata") {
+                setResult(prev => ({ ...prev, ...data.content }));
+              }
+            } catch (e) {
+              console.error("Error parsing stream chunk", e);
+            }
+          }
+        }
+      }
     } catch (err) {
-      setResult({ error: err.response?.data?.detail || "Query failed" })
+      setResult({ error: err.message || "Query failed" });
     } finally {
       setLoading(false)
     }
