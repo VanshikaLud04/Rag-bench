@@ -1,6 +1,9 @@
 import chromadb
 from functools import lru_cache
 from .config import settings
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import os
 
 @lru_cache()
 def get_chroma_client():
@@ -15,3 +18,14 @@ def get_or_create_collection(name: str):
         name=name,
         metadata={"hnsw:space": "cosine"}
     )
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./ragbench.db")
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

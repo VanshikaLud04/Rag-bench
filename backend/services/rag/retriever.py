@@ -138,3 +138,44 @@ class Retriever:
             hybrid_chunks.append(chunk)
             
         return hybrid_chunks
+
+from .pipeline import RetrievalPipeline
+from .query_rewriter import QueryRewriter
+from .reranker import CrossEncoderReranker
+from .compressor import ExtractiveContextCompressor
+import asyncio
+
+class CoreRetrievalPipeline(RetrievalPipeline):
+    def __init__(self):
+        self.rewriter = QueryRewriter()
+        self.retriever = Retriever()
+        self.reranker = CrossEncoderReranker()
+        self.compressor = ExtractiveContextCompressor()
+        
+    async def run(self, query: str) -> List[RetrievedChunk]:
+        # 1. Rewrite Query
+        variants = await self.rewriter.rewrite(query)
+        
+        # 2. Hybrid Search for each variant
+        all_chunks = []
+        for variant in variants:
+            chunks = self.retriever.retrieve(variant, top_k=20, strategy="hybrid")
+            all_chunks.extend(chunks)
+            
+        # Deduplicate before reranking
+        seen = set()
+        unique_chunks = []
+        for c in all_chunks:
+            identifier = f"{c.doc_id}_{c.chunk_index}"
+            if identifier not in seen:
+                seen.add(identifier)
+                unique_chunks.append(c)
+                
+        # 3. Rerank
+        reranked = self.reranker.rerank(query, unique_chunks)
+        
+        # 4. Compress
+        # Assuming budget of ~1000 words for the context
+        compressed = self.compressor.compress(query, reranked[:10], budget=1000)
+        
+        return compressed

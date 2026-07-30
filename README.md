@@ -1,308 +1,165 @@
-# RagBench
+# Production Retrieval Platform
 
-**Production-grade RAG Evaluation Platform for Academic Research Papers**
+**Enterprise-Grade Document Search and Information Retrieval System**
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5-FF6B35?style=flat)](https://trychroma.com)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://docker.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
 
 ---
 
-## Why RagBench?
+## 1. Executive Summary
 
-Most RAG demos just show that retrieval works. RagBench measures *how well* it works.
+The Production Retrieval Platform enables enterprise-grade document search by combining hybrid retrieval, query rewriting, reranking, context compression, citation grounding, and continuous evaluation.
 
-| Feature | RagBench | Basic RAG demo |
-|---|---|---|
-| Multi-model parallel generation | ✅ | ❌ |
-| RAG-aware metrics (precision, faithfulness) | ✅ | ❌ |
-| Retrieval debugger (chunk scores visible) | ✅ | ❌ |
-| Side-by-side model comparison | ✅ | ❌ |
-| Hybrid Search (Dense + Sparse BM25 + RRF) | ✅ | ❌ |
-| Production architecture (layered services) | ✅ | ❌ |
-| Streaming LLM Responses | ✅ | ❌ |
-| Semantic Caching (Redis Stack) | ✅ | ❌ |
-| Prompt Versioning | ✅ | ❌ |
-
-Built to answer a real question: **given the same retrieved context, which LLM produces the most faithful, relevant answer?**
+Unlike traditional RAG applications that simply embed and retrieve, this system continuously measures retrieval quality, strictly controls context budgets, grounds all generated answers to explicit source citations, and remains extensible across a multitude of document types.
 
 ---
 
-## What it does
+## 2. System Requirements & Guarantees
 
-Single `/evaluate` endpoint runs the full pipeline:
+### Functional Capabilities
+- **Multi-Format Ingestion**: Parsers for PDF, DOCX, Markdown, Websites, and GitHub repositories.
+- **Advanced Search**: Hybrid search utilizing both dense embeddings and sparse (BM25) matching.
+- **Retrieval Optimization**: Query rewriting, cross-encoder reranking, and extractive context compression.
+- **Continuous Evaluation**: Sampled, asynchronous live-traffic scoring for quality metrics.
+- **Feedback & Analytics**: Integrated user feedback loops and metrics aggregation.
 
-```
-Upload PDF → Chunk → Embed → ChromaDB (Dense + Sparse Index)
-                                ↓
-Query → Hybrid Search (Dense/Sparse/Hybrid) → Context → LLM Router → parallel generation
-                                                      ↓
-                                              Evaluation Engine
-                                              (per model, per query)
-```
-
-Metrics computed per model per query:
-
-- **Context Precision** — what fraction of retrieved chunks actually support the answer
-- **Context Recall** — how much of the ground truth is covered by retrieved context
-- **Faithfulness** — how grounded the answer is in retrieved chunks (not hallucinated)
-- **Answer Relevancy** — semantic similarity between query and final answer
-- **Agentic self-critique** — Gemini evaluates its own answer for hallucination and autonomously retries with a stricter prompt if needed
+### Retrieval Contracts (System Invariants)
+- **Traceability**: Every query, generation, and evaluation is fully traceable via UUIDs.
+- **Citation Grounding**: Every generated citation physically maps back to a retrieved source chunk.
+- **Budget Enforcement**: No retrieved context ever exceeds the configured LLM token limit.
+- **Data Immutability**: User feedback never modifies source data or indices directly.
 
 ---
 
-## Performance & Metrics
+## 3. High-Level Architecture
 
-RagBench doesn't just run RAG; it empirically proves architectural improvements. Using our integrated evaluation script (`scripts/evaluate_ragbench.py`) on a robust dataset of academic queries, we demonstrate the concrete impact of our advanced pipeline:
+The architecture separates concerns into specialized layers, avoiding the monolithic "chain" approach common in simple RAG tutorials.
 
-> **Improved generation faithfulness from 69.6% to 92.5%** by implementing Hybrid Search (dense embeddings + sparse BM25) and integrating an automated LLM-as-a-judge retry mechanism.
-
-**How we achieve this:**
-1. **Hybrid Search:** Combines dense semantic understanding with precise sparse BM25 keyword matching, fused via Reciprocal Rank Fusion (RRF).
-2. **LLM-as-a-judge Retry Loop:** If the generated answer's faithfulness score falls below 0.8, the system autonomously intercepts the response, increases the context window (`top_k`), injects strict anti-hallucination prompt instructions, and retries generation. We use **GPT-4o** as a highly capable LLM-as-a-judge for objective evaluation, falling back to local models if offline.
-3. **Semantic Caching:** Bypasses heavy LLM computation for repeated or similar queries using Redis Vector search, **dropping latency by 97.6% (from 3.5s to 85ms)**.
-4. **Streaming (SSE):** Yields tokens immediately to the frontend as they are generated, achieving a snappy **Time-to-First-Token (TTFT) of ~320ms** for a ChatGPT-like user experience.
-
----
-
-## Screenshots
-
-### Upload
-<img width="1460" height="419" alt="Pasted Graphic 1" src="https://github.com/user-attachments/assets/639a6d82-2c0e-4509-93a1-f8ee8c174d52" />
-
-
-### Query
-<img width="1470" height="824" alt="Pasted Graphic" src="https://github.com/user-attachments/assets/dda5dd7a-e18c-41a3-9661-042c570164f4" />
-
-
-### Evaluation — multi-model comparison
-<img width="1470" height="355" alt="Pasted Graphic 1" src="https://github.com/user-attachments/assets/24064537-0f67-452d-b129-b30fc061da80" />
-
-
-> **Note:** Local model evaluation (phi3, mistral) requires 16GB+ RAM for concurrent multi-model generation. Screenshots were captured using Gemini due to hardware constraints during development. The full pipeline runs correctly with all models in a sufficiently resourced environment.
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│  Frontend  (React + Vite, port 3000)        │
-└───────────────────┬─────────────────────────┘
-                    │ HTTP
-┌───────────────────▼─────────────────────────┐
-│  FastAPI Gateway  (port 8000)               │
-│  /ingest  /query  /evaluate  /health        │
-└──────┬──────────────┬───────────────┬───────┘
-       │              │               │
-┌──────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐
-│  Ingestion  │ │    RAG     │ │    LLM     │
-│  PDF parse  │ │  Retriever │ │   Router   │
-│  Chunk+Embed│ │  Dense     │ │ phi3       │
-│  ChromaDB   │ │  Sparse    │ │ mistral    │
-│             │ │  Hybrid    │ │ gemini-2.0 │
-└─────────────┘ └────────────┘ │            │
-                               └─────┬──────┘
-                          ┌──────────▼───────┐
-                          │  Evaluation      │
-                          │  ctx precision   │
-                          │  faithfulness    │
-                          │  answer relevancy│
-                          └──────────────────┘
-
-Infrastructure:
-  ChromaDB  → persistent HTTP server  (port 8001)
-  Redis     → Semantic Cache          (port 6379)
-  Ollama    → Mac native              (port 11434)
-  API       → Uvicorn / Docker        (port 8000)
-  Frontend  → Vite / Docker           (port 3000)
+```mermaid
+flowchart TD
+    User[User / Client] --> API[FastAPI Gateway]
+    API --> QueryPipeline[Retrieval Pipeline]
+    QueryPipeline --> HybridSearch[Hybrid Search]
+    HybridSearch --> Generation[LLM Generation]
+    Generation --> Evaluation[Live Evaluation]
+    Generation --> Analytics[Analytics Service]
 ```
 
 ---
 
-## Tech Stack
+## 4. End-to-End Pipeline
 
-| Layer | Technology |
-|---|---|
-| API | FastAPI, Pydantic v2, Uvicorn |
-| Vector DB | ChromaDB (persistent, dense vector storage) |
-| Search Strategies | Dense Vector, Sparse (BM25), Hybrid (RRF) |
-| Embeddings | sentence-transformers `all-MiniLM-L6-v2` |
-| Caching | Redis Stack (RediSearch for Semantic Caching) |
-| Local LLMs | Ollama — phi3, mistral, llama3.2 |
-| Cloud LLMs | Gemini 1.5 Flash, OpenAI GPT-4o (Judge) |
-| Evaluation | Custom RAG metrics, semantic similarity, rouge-score |
-| Frontend | React 19, Vite, Axios |
-| CI/CD | GitHub Actions |
-| Deployment | Docker Compose, Railway |
+This represents the core data and request flow for ingestion and retrieval.
+
+```mermaid
+flowchart TD
+    Upload --> Parser --> Chunker --> Embedding --> VectorStore[ChromaDB] & MetadataStore[Postgres]
+    
+    UserQuery[User Query] --> Rewrite[Query Rewrite] --> HybridSearch[Hybrid Search] --> RRF[RRF Fusion] --> CrossEncoder[Cross Encoder Rerank] --> Compression[Context Compression] --> LLM[LLM Generation] --> Citation[Citation Engine] --> Evaluation[Evaluation] --> Feedback[Feedback]
+```
 
 ---
 
-## Setup
+## 5. Architectural Deep Dives
+
+### Parser Registry
+The ingestion system follows the Open/Closed Principle. Adding a new file type only requires creating a class that implements the `DocumentParser` interface. Chunking strategies are tightly coupled to the parser format to ensure semantic boundaries are respected:
+- **PDF**: Token-based Chunker (fixed size with overlap).
+- **Markdown**: Heading Chunker.
+- **GitHub**: AST / Function Chunker.
+- **Website**: DOM Chunker.
+
+### Hybrid Retrieval & RRF
+Queries are fanned out concurrently to both Dense (Vector) and Sparse (BM25) indices.
+The results are merged using Reciprocal Rank Fusion (RRF):
+`RRF_score(d) = Σ_i 1 / (k + rank_i(d))`
+We use RRF instead of weighted averaging because it elegantly fuses scores from different spaces (unbounded BM25 vs. cosine distance) without requiring complex score calibration.
+
+### Cross-Encoder Reranking
+While Bi-Encoders are fast (pre-computed), they lack precision. Cross-Encoders jointly encode the query and document, leading to significantly higher relevance. Because they are computationally expensive `O(N)`, we filter down to a top-K candidate list via the Bi-Encoder, and only apply the Cross-Encoder to the shortlist.
+
+### Context Compression
+We utilize an **Extractive-First** compression algorithm. It scores sentences within the retrieved chunks and selects only the highest-value sentences until the exact token budget is reached. This is deterministic, extremely fast, and avoids the high latency of invoking a summarization LLM.
+
+### Citation Engine
+LLMs hallucinate citations if asked to self-report. We employ a post-hoc grounding system.
+1. The generated answer is split into sentences.
+2. Each sentence is embedded and compared against the embeddings of the retrieved chunks.
+3. Citations are strictly grounded if the cosine similarity exceeds `0.75`.
+
+---
+
+## 6. Evaluation Metrics
+
+To ensure the system improves empirically, a sampled percentage of live queries undergo automated evaluation without blocking the client response:
+- **Faithfulness**: Is the answer derived solely from the provided context?
+- **Context Precision**: Were the highly ranked chunks actually relevant to the query?
+- **Context Recall**: Did the retrieved chunks cover all elements needed to answer the query?
+- **Answer Relevancy**: Does the generated answer directly address the user's prompt?
+
+---
+
+## 7. Storage Ownership
+
+We utilize purpose-built data stores rather than forcing one database to do everything:
+- **PostgreSQL**: Relational metadata, Queries, Evaluation Scores, User Feedback.
+- **ChromaDB**: Dense vector embeddings and similarity search indices.
+- **Redis (Optional)**: Semantic caching for bypassing retrieval on duplicate queries.
+
+---
+
+## 8. Failure Modes & Resilience
+
+- **Embedding / LLM Failure**: Fallback to alternative local models or degrade gracefully.
+- **Vector DB Outage**: Graceful fallback to Keyword (BM25) only.
+- **Citation Failure (Threshold miss)**: Returns the answer without a citation (we strictly refuse to fabricate sources).
+- **Evaluation Failure**: Fails open. Skips the evaluation and logs the error; the user's critical path is unaffected.
+
+---
+
+## 9. Local Setup & Execution
 
 ### Prerequisites
+- Docker & Docker Compose
+- Native `ollama` installation (if using local models for generation)
 
-- Docker + Docker Compose (optional, for containerised setup)
-- [Ollama](https://ollama.ai) installed and running natively
-- Gemini API key — free tier at [aistudio.google.com](https://aistudio.google.com)
-
-### 1 — Pull Ollama models
-
+### Start Services
 ```bash
-ollama pull phi3
-ollama pull mistral
+# Clone the repository
+git clone https://github.com/VanshikaLud04/Rag-bench
+cd Rag-bench
+
+# Start the infrastructure (Postgres, ChromaDB, Redis, API)
+docker compose up -d
 ```
 
-Verify:
-
-```bash
-ollama list
-```
-
-### 2 — Clone and configure
-
-```bash
-git clone https://github.com/VanshikaLud04/ragbench
-cd ragbench
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```dotenv
-CHROMA_HOST=localhost
-CHROMA_PORT=8001
-OLLAMA_HOST=http://localhost:11434
-GEMINI_API_KEY=your_key_here
-OPENAI_API_KEY=your_openai_key_here
-REDIS_URL=redis://localhost:6379
-```
-
-> If running inside Docker, use `OLLAMA_HOST=http://host.docker.internal:11434` and `CHROMA_HOST=chromadb`.
-
-### 3 — Start ChromaDB
-
-```bash
-chroma run --host localhost --port 8001 --path ./chroma_data
-```
-
-### 4 — Start the API
-
-```bash
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cd ragbench
-uvicorn backend.main:app --reload
-```
-
-### 5 — Start the frontend
-
-```bash
-cd ragbench/frontend/frontend
-npm install
-npm run dev
-```
-
-| Service | URL |
-|---|---|
-| Frontend | http://localhost:3000 |
-| API | http://localhost:8000 |
-| API Docs | http://localhost:8000/docs |
-| ChromaDB | http://localhost:8001 |
-
-### Docker (full stack)
-
-```bash
-docker compose up --build
-```
-
----
-
-## Project Structure
-
-```
-ragbench/
-├── backend/
-│   ├── main.py
-│   ├── core/
-│   │   ├── config.py          # Pydantic settings, env vars
-│   │   └── database.py        # ChromaDB HttpClient
-│   ├── api/
-│   │   ├── routes/            # ingest, query, evaluate, health
-│   │   └── schemas/           # request + response models
-│   └── services/
-│       ├── ingestion/         # PDF processing, chunking, embedding
-│       ├── rag/               # vector store, retriever, context builder
-│       ├── llm/               # router, ollama client, gemini client
-│       └── evaluation/        # evaluator, metrics
-├── frontend/
-│   └── frontend/
-│       └── src/
-│           ├── pages/         # Upload, Query, Evaluate
-│           └── components/    # Navbar, ChunkViewer, ComparisonTable
-├── scripts/                   # Helper scripts (e.g., pull_models.sh)
-├── tests/                     # Pytest test cases for RAG, strategies, and eval
-├── data/                      # Local data storage directory
-├── docker-compose.yml
-├── Dockerfile
-├── railway.json               # Railway deployment configuration
-├── requirements.txt
-└── .env.example
-```
-
----
-
-## Testing
-
-Run the backend tests using `pytest` (ensure you have it installed):
-
-```bash
-pip install pytest
-pytest tests/
-```
-
----
-
-## Deployment
-
-In addition to Docker Compose, the repository includes a `railway.json` file for out-of-the-box deployment to [Railway](https://railway.app/).
-
----
-
-## API Reference
-
+### API Reference
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/ingest/` | Upload and ingest a PDF |
-| `POST` | `/query/` | RAG query with single model. Accepts optional `strategy` param (`dense`, `sparse`, `hybrid`) |
-| `POST` | `/evaluate/` | Multi-model eval with full metrics. Accepts optional `strategy` param |
-| `GET` | `/health/` | Health check |
-
-Full interactive docs at `http://localhost:8000/docs`
+| `POST` | `/ingest/` | Upload and ingest a document. |
+| `POST` | `/query/stream` | Full retrieval pipeline with streaming SSE response. |
+| `POST` | `/feedback/` | Submit user rating (+1/-1) for a query. |
 
 ---
 
-## Known Limitations
+## 10. Future Roadmap
 
-- Concurrent local model evaluation (phi3 + mistral simultaneously) requires 16GB+ RAM
-- ChromaDB must be running as a separate HTTP server before starting the API
-- Gemini model name must match the current SDK and config — currently configured as `gemini-1.5-flash`
+**V2 (Upcoming)**
+- Incremental indexing and document updates.
+- Optical Character Recognition (OCR) integration.
+- Image extraction and multimodal search capabilities.
 
----
-
-## Roadmap
-
-- [ ] ARES / Ragas integration for standardised eval scores
-- [ ] Experiment tracking — save and compare eval runs over time
-- [ ] Support for more file types (DOCX, TXT, MD)
-- [x] OpenAI GPT-4o as additional model option / judge
-- [ ] Automated dataset generation from uploaded papers
+**V3**
+- Agentic retrieval and knowledge graph integration.
+- Multi-hop document retrieval.
+- Learned reranking architectures.
 
 ---
 
 ## License
-
 MIT

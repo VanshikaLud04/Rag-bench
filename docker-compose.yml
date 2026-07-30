@@ -18,6 +18,7 @@ services:
       - OLLAMA_HOST=${OLLAMA_HOST}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://ragbench:ragbench@postgres:5432/ragbench
     restart: unless-stopped
   chromadb:
     image: chromadb/chroma:latest
@@ -40,6 +41,21 @@ services:
     volumes:
       - redis_data:/data
 
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=ragbench
+      - POSTGRES_PASSWORD=ragbench
+      - POSTGRES_DB=ragbench
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ragbench"]
+      interval: 10s
+      retries: 5
+
   frontend:
     build: ./frontend
     ports:
@@ -50,3 +66,4 @@ services:
 volumes:
   chroma_data:
   redis_data:
+  postgres_data:
