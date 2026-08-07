@@ -56,3 +56,63 @@ class Feedback(Base):
     query_id = Column(String, ForeignKey('queries.id'))
     rating = Column(Integer) # e.g. 1 (thumbs up) or -1 (thumbs down)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Dataset(Base):
+    __tablename__ = 'datasets'
+    id = Column(String, primary_key=True)
+    name = Column(String)
+    description = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    items = relationship("DatasetItem", back_populates="dataset")
+
+class DatasetItem(Base):
+    __tablename__ = 'dataset_items'
+    id = Column(String, primary_key=True)
+    dataset_id = Column(String, ForeignKey('datasets.id'))
+    query = Column(String)
+    ground_truth = Column(String)
+    document_id = Column(String, nullable=True) # Optional reference to source document
+    
+    dataset = relationship("Dataset", back_populates="items")
+
+class Experiment(Base):
+    __tablename__ = 'experiments'
+    id = Column(String, primary_key=True)
+    name = Column(String)
+    description = Column(String)
+    config = Column(JSON)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    runs = relationship("ExperimentRun", back_populates="experiment")
+
+class ExperimentRun(Base):
+    __tablename__ = 'experiment_runs'
+    id = Column(String, primary_key=True)
+    experiment_id = Column(String, ForeignKey('experiments.id'))
+    start_time = Column(DateTime, default=datetime.utcnow)
+    end_time = Column(DateTime, nullable=True)
+    status = Column(String) # 'running', 'completed', 'failed'
+    
+    # Provenance fields for optimization
+    parent_experiment_id = Column(String, ForeignKey('experiments.id'), nullable=True)
+    trial_number = Column(Integer, nullable=True)
+    search_strategy = Column(String, nullable=True)
+    seed = Column(String, nullable=True)
+    config_delta = Column(JSON, nullable=True)
+    
+    experiment = relationship("Experiment", back_populates="runs", foreign_keys=[experiment_id])
+    metrics = relationship("ExperimentMetrics", back_populates="run", uselist=False)
+
+class ExperimentMetrics(Base):
+    __tablename__ = 'experiment_metrics'
+    id = Column(String, primary_key=True)
+    run_id = Column(String, ForeignKey('experiment_runs.id'))
+    avg_latency = Column(Float, nullable=True)
+    total_cost = Column(Float, nullable=True)
+    avg_precision = Column(Float, nullable=True)
+    avg_recall = Column(Float, nullable=True)
+    avg_faithfulness = Column(Float, nullable=True)
+    avg_relevancy = Column(Float, nullable=True)
+    
+    run = relationship("ExperimentRun", back_populates="metrics")

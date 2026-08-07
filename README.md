@@ -1,163 +1,90 @@
-# Production Retrieval Platform
+# RAGOS (formerly RagBench)
 
-**Enterprise-Grade Document Search and Information Retrieval System**
+**The RAG Optimization Engine (AutoML for Retrieval-Augmented Generation)**
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5-FF6B35?style=flat)](https://trychroma.com)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://docker.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
 
 ---
 
 ## 1. Executive Summary
 
-The Production Retrieval Platform enables enterprise-grade document search by combining hybrid retrieval, query rewriting, reranking, context compression, citation grounding, and continuous evaluation.
+RAGOS (Retrieval-Augmented Generation Operating System) is an extensible experimentation framework and optimization engine for RAG systems. It goes beyond static benchmarking. RAGOS acts as an **AutoML decision engine**, actively searching for and discovering the best RAG pipeline for a given dataset under explicit user constraints (e.g., budget, latency limits, local hardware requirements).
 
-Unlike traditional RAG applications that simply embed and retrieve, this system continuously measures retrieval quality, strictly controls context budgets, grounds all generated answers to explicit source citations, and remains extensible across a multitude of document types.
+Instead of guessing whether to use a Cross-Encoder, Hybrid Search, or a larger Chunk Size, RAGOS evaluates the combinatorial search space and returns a multi-dimensional **Pareto Frontier** of the optimal pipelines.
 
 ---
 
-## 2. System Requirements & Guarantees
+## 2. Core Features (V2 Optimization Engine)
 
-### Functional Capabilities
-- **Multi-Format Ingestion**: Parsers for PDF, DOCX, Markdown, Websites, and GitHub repositories.
-- **Advanced Search**: Hybrid search utilizing both dense embeddings and sparse (BM25) matching.
-- **Retrieval Optimization**: Query rewriting, cross-encoder reranking, and extractive context compression.
-- **Continuous Evaluation**: Sampled, asynchronous live-traffic scoring for quality metrics.
-- **Feedback & Analytics**: Integrated user feedback loops and metrics aggregation.
+### 🚀 AutoML Optimization Loop
+Submit declarative constraints (`latency <= 500ms`, `local_only = true`) and an objective (e.g., `maximize: faithfulness`). The engine automatically:
+1. Mutates candidate configurations to repair constraint violations.
+2. Explores the hyperparameter space (Chunk sizes, Retrieval strategies, Generator models).
+3. Executes trials asynchronously in parallel.
 
-### Retrieval Contracts (System Invariants)
-- **Traceability**: Every query, generation, and evaluation is fully traceable via UUIDs.
-- **Citation Grounding**: Every generated citation physically maps back to a retrieved source chunk.
-- **Budget Enforcement**: No retrieved context ever exceeds the configured LLM token limit.
-- **Data Immutability**: User feedback never modifies source data or indices directly.
+### 📊 N-Dimensional Pareto Leaderboards
+Instead of collapsing Quality, Speed, and Cost into a single arbitrary score, RAGOS computes a true **Pareto Frontier**. Visualize the exact trade-offs and choose the configuration that perfectly fits your production requirements (Fastest vs. Cheapest vs. Highest Quality).
+
+### 🔌 Framework-Agnostic Plugin Architecture
+RAGOS orchestrates experiments, not vendor lock-in. The core logic programs against abstract interfaces (`BaseRetriever`, `BaseGenerator`, etc.). You can easily drop new integrations into the `plugins/` directory without rewriting the engine.
+
+### 💰 Automated Cost & Latency Tracking
+Integrated with `litellm` to track exact token costs across providers, automatically zeroing out costs for local models (`phi3`, `mistral`, `llama3`).
 
 ---
 
 ## 3. High-Level Architecture
 
-The architecture separates concerns into specialized layers, avoiding the monolithic "chain" approach common in simple RAG tutorials.
+The architecture separates execution from orchestration and optimization.
 
 ```mermaid
 flowchart TD
-    User[User / Client] --> API[FastAPI Gateway]
-    API --> QueryPipeline[Retrieval Pipeline]
-    QueryPipeline --> HybridSearch[Hybrid Search]
-    HybridSearch --> Generation[LLM Generation]
-    Generation --> Evaluation[Live Evaluation]
-    Generation --> Analytics[Analytics Service]
+    API[Optimization API] --> Optimizer[Random Search Optimizer]
+    Optimizer --> Constraints[Constraint Solver / Repair]
+    Constraints --> Executor[Parallel Executor]
+    Executor --> Runner[Experiment Runner]
+    Runner --> Eval[Live Evaluator & Cost Tracker]
+    Eval --> DB[(Postgres Metrics DB)]
+    DB --> Pareto[Pareto Calculator]
+    Pareto --> API
 ```
 
 ---
 
-## 4. End-to-End Pipeline
+## 4. Architecture Decision Records (ADRs)
 
-This represents the core data and request flow for ingestion and retrieval.
-
-```mermaid
-flowchart TD
-    Upload --> Parser --> Chunker --> Embedding --> VectorStore[ChromaDB] & MetadataStore[Postgres]
-    
-    UserQuery[User Query] --> Rewrite[Query Rewrite] --> HybridSearch[Hybrid Search] --> RRF[RRF Fusion] --> CrossEncoder[Cross Encoder Rerank] --> Compression[Context Compression] --> LLM[LLM Generation] --> Citation[Citation Engine] --> Evaluation[Evaluation] --> Feedback[Feedback]
-```
+Our engineering reasoning is documented. See the `docs/adr/` directory for insight into major architectural choices:
+- `0001-random-search-over-grid-search.md`: Why we avoid combinatorial explosion.
+- `0002-pareto-frontier-for-leaderboards.md`: Why single-score leaderboards are flawed.
+- `0003-framework-agnostic-interfaces.md`: Why we avoid tight coupling to specific RAG frameworks.
+- `0004-plugin-architecture-for-extensibility.md`: How the system scales via auto-discovery.
 
 ---
 
-## 5. Architectural Deep Dives
+## 5. API Reference
 
-### Parser Registry
-The ingestion system follows the Open/Closed Principle. Adding a new file type only requires creating a class that implements the `DocumentParser` interface. Chunking strategies are tightly coupled to the parser format to ensure semantic boundaries are respected:
-- **PDF**: Token-based Chunker (fixed size with overlap).
-- **Markdown**: Heading Chunker.
-- **GitHub**: AST / Function Chunker.
-- **Website**: DOM Chunker.
-
-### Hybrid Retrieval & RRF
-Queries are fanned out concurrently to both Dense (Vector) and Sparse (BM25) indices.
-The results are merged using Reciprocal Rank Fusion (RRF):
-`RRF_score(d) = Σ_i 1 / (k + rank_i(d))`
-We use RRF instead of weighted averaging because it elegantly fuses scores from different spaces (unbounded BM25 vs. cosine distance) without requiring complex score calibration.
-
-### Cross-Encoder Reranking
-While Bi-Encoders are fast (pre-computed), they lack precision. Cross-Encoders jointly encode the query and document, leading to significantly higher relevance. Because they are computationally expensive `O(N)`, we filter down to a top-K candidate list via the Bi-Encoder, and only apply the Cross-Encoder to the shortlist.
-
-### Context Compression
-We utilize an **Extractive-First** compression algorithm. It scores sentences within the retrieved chunks and selects only the highest-value sentences until the exact token budget is reached. This is deterministic, extremely fast, and avoids the high latency of invoking a summarization LLM.
-
-### Citation Engine
-LLMs hallucinate citations if asked to self-report. We employ a post-hoc grounding system.
-1. The generated answer is split into sentences.
-2. Each sentence is embedded and compared against the embeddings of the retrieved chunks.
-3. Citations are strictly grounded if the cosine similarity exceeds `0.75`.
-
----
-
-## 6. Evaluation Metrics
-
-To ensure the system improves empirically, a sampled percentage of live queries undergo automated evaluation without blocking the client response:
-- **Faithfulness**: Is the answer derived solely from the provided context?
-- **Context Precision**: Were the highly ranked chunks actually relevant to the query?
-- **Context Recall**: Did the retrieved chunks cover all elements needed to answer the query?
-- **Answer Relevancy**: Does the generated answer directly address the user's prompt?
-
----
-
-## 7. Storage Ownership
-
-We utilize purpose-built data stores rather than forcing one database to do everything:
-- **PostgreSQL**: Relational metadata, Queries, Evaluation Scores, User Feedback.
-- **ChromaDB**: Dense vector embeddings and similarity search indices.
-- **Redis (Optional)**: Semantic caching for bypassing retrieval on duplicate queries.
-
----
-
-## 8. Failure Modes & Resilience
-
-- **Embedding / LLM Failure**: Fallback to alternative local models or degrade gracefully.
-- **Vector DB Outage**: Graceful fallback to Keyword (BM25) only.
-- **Citation Failure (Threshold miss)**: Returns the answer without a citation (we strictly refuse to fabricate sources).
-- **Evaluation Failure**: Fails open. Skips the evaluation and logs the error; the user's critical path is unaffected.
-
----
-
-## 9. Local Setup & Execution
-
-### Prerequisites
-- Docker & Docker Compose
-- Native `ollama` installation (if using local models for generation)
-
-### Start Services
-```bash
-# Clone the repository
-git clone https://github.com/VanshikaLud04/Rag-bench
-cd Rag-bench
-
-# Start the infrastructure (Postgres, ChromaDB, Redis, API)
-docker compose up -d
-```
-
-### API Reference
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/ingest/` | Upload and ingest a document. |
-| `POST` | `/query/stream` | Full retrieval pipeline with streaming SSE response. |
-| `POST` | `/feedback/` | Submit user rating (+1/-1) for a query. |
+| `POST` | `/datasets/upload` | Upload a query-ground_truth dataset for experimentation. |
+| `POST` | `/experiments/` | Create a baseline experiment configuration. |
+| `POST` | `/experiments/{id}/optimize` | Launch the AutoML optimizer on a baseline. |
+| `POST` | `/experiments/leaderboard/pareto` | Retrieve the non-dominated set of optimal pipelines. |
 
 ---
 
-## 10. Future Roadmap
+## 6. Future Roadmap
 
-**V2 (Upcoming)**
-- Incremental indexing and document updates.
-- Optical Character Recognition (OCR) integration.
-- Image extraction and multimodal search capabilities.
+**V3 (Intelligent Diagnosis)**
+- `LLMJudgeAnalyzer`: Auto-generates explanatory reports detailing exactly *why* a pipeline failed (e.g., "Chunk 3 contradicts Answer Y").
+- Extensible failure categorization.
 
-**V3**
-- Agentic retrieval and knowledge graph integration.
-- Multi-hop document retrieval.
-- Learned reranking architectures.
+**V4 (Adaptation)**
+- Automated LoRA fine-tuning for domain adaptation when heuristic optimization hits a ceiling.
+- Synthetic dataset generation.
 
 ---
 
