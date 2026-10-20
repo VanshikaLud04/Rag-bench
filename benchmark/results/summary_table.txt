@@ -1,0 +1,22 @@
+
+Strategy             Prec  Recall   Faith  AnsRel  RougeL  Lat(ms)   Cost/1k  Pareto
+=====================================================================================
+Default            0.9500  0.7978  0.5917  0.5585  0.6494     28.3   $0.0827     YES
+Random-Mean        0.8739  0.7576  0.7183  0.0000  0.5077     31.9   $0.0807      NO
+Random-Best        0.9500  0.7978  0.5917  0.5585  0.6494     47.0   $0.0827      NO
+RAGOS-Optimized    0.9667  0.8036  0.6875  0.5680  0.5695      9.0   $0.0695     YES
+=====================================================================================
+
+  Gains vs Default Baseline:
+  Random-Best:
+    context_precision     : +0.0000  (+0.0%) ↑
+    context_recall        : +0.0000  (+0.0%) ↑
+    avg_latency_ms        : +18.7000  (+66.1%) ↓
+    cost_per_1k           : +0.0000  (+0.0%) ↑
+
+  RAGOS-Optimized:
+    context_precision     : +0.0167  (+1.8%) ↑
+    context_recall        : +0.0058  (+0.7%) ↑
+    avg_latency_ms        : -19.3000  (-68.3%) ↑
+    cost_per_1k           : -0.0132  (-16.0%) ↑
+
