@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict
 from dataclasses import dataclass
 import logging
+import re
 try:
     from rank_bm25 import BM25Okapi
 except ImportError:
@@ -45,8 +46,9 @@ class Retriever:
         self.embedder = Embedder()
 
     def _tokenize(self, text: str) -> List[str]:
-        # Simple whitespace tokenization, lowercased
-        return text.lower().split()
+        # Lowercase word tokenization that strips punctuation, so a query
+        # token "pets" matches a corpus token like "pets." in BM25 scoring.
+        return re.findall(r"\w+", text.lower())
 
     def retrieve(
         self,

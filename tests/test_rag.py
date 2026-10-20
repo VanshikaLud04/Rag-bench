@@ -15,6 +15,6 @@ def test_embedder_batch():
     assert len(vecs) == 2
 
 def test_chunk_text():
-    from backend.services.ingestion.document_processor import chunk_text
-    chunks = chunk_text("word " * 200, chunk_size=50, overlap=10)
+    from backend.services.ingestion.document_processor import chunk_text_fixed
+    chunks = chunk_text_fixed("word " * 200, chunk_size=50, overlap=10)
     assert len(chunks) > 1
