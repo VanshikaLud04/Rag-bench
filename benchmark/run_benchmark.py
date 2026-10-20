@@ -1,175 +1,275 @@
 """
-RAGOS Reproducible Benchmark  v3
-==================================
-Empirically compares three RAG pipeline approaches on 20 QA pairs:
-  1. Default Pipeline      – Naive baseline (chunk=512, dense, top_k=3, no reranker)
-  2. Random Search          – Unguided random search across 12 hyperparameter configurations
-  3. RAGOS-Optimized        – Optimizer-selected Pareto-optimal pipeline under latency & cost constraints
+RAGOS Empirical Benchmark: Baseline vs Random Search vs RAGOS Optimizer
+======================================================================
+Empirically benchmarks RAG pipeline configurations on a controlled technical QA corpus:
+  1. Default Baseline    – Standard unoptimized pipeline (chunk=512, dense, top_k=3, no-rerank)
+  2. Random Search       – Unguided exploration across search dimensions (12 trials without constraint repair)
+  3. RAGOS Optimizer     – Constraint-guided search via RandomOptimizer + ConstraintSolver + ParetoCalculator
 
-Reports complete multi-dimensional trade-offs:
-  - Retrieval Quality: Context Precision, Context Recall
-  - Generation Quality: Faithfulness, Answer Relevancy, ROUGE-L
-  - Operational Efficiency: Latency (ms), Query Cost ($ / 1,000 queries)
-  - Pareto Frontier Membership
-
-Corpus design:
---------------
-Each ground-truth answer is embedded mid-way inside a ~500-char padded
-document alongside distractor sentences on adjacent topics. The corpus
-also contains 10 fully unrelated distractor documents. Different chunk
-sizes split these mixed documents differently, so precision, recall,
-and token costs genuinely vary across configurations.
+Scope & Measurement Attribution:
+--------------------------------
+- Retrieval-Stage Latency: Measured wall-clock time (ms) for index query, dense/sparse/hybrid fusion,
+  and CrossEncoder reranking. (Generation latency is excluded as it depends on external LLM provider round-trips).
+- Context Token Footprint & Projected Input Cost: Calculated from prompt tokens of retrieved context chunks
+  at standard input rates ($0.150 per 1M input tokens).
+- IR Precision@K: Fraction of retrieved chunks originating from the ground-truth source document.
+- Evidence Recall: Proportion of ground-truth content tokens retrieved in the context.
+- Groundedness / Faithfulness: Proportion of synthesized answer content grounded in retrieved chunks.
+- Answer Relevancy: Semantic cosine similarity between query and retrieved context.
 
 Outputs:
   benchmark/results/benchmark_results.json
   benchmark/results/summary_table.txt
 """
 
-import json, os, random, time
-from typing import List, Dict, Any, Tuple
+import copy, json, os, random, re, sys, time
+from typing import List, Dict, Any, Tuple, Set
 
 import numpy as np
-from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from rouge_score import rouge_scorer as rs_module
+
+# Ensure repository root is on sys.path
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from backend.services.optimization.constraints import ConstraintSolver
+from backend.services.optimization.pareto import ParetoCalculator
+from backend.services.optimization.optimizer import RandomOptimizer
+from backend.services.optimization.dimensions import get_default_dimensions
 
 # ── Reproducibility ───────────────────────────────────────────────────────────
 SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
 
-DATA_PATH   = os.path.join(os.path.dirname(__file__), "..", "data", "qa_pairs.json")
-RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
+DATA_PATH   = os.path.join(REPO_ROOT, "data", "qa_pairs.json")
+RESULTS_DIR = os.path.join(REPO_ROOT, "benchmark", "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-# ── Search space ──────────────────────────────────────────────────────────────
-SEARCH_SPACE: Dict[str, List[Any]] = {
-    "chunk_size":         [128, 256, 512, 1024],
-    "retrieval_strategy": ["dense", "sparse", "hybrid"],
-    "top_k":              [3, 5, 10],
-    "use_reranker":       [False, True],
-}
+# Production SLA constraints: sub-20ms retrieval latency and <= $0.080 / 1k queries
+SLA_CONSTRAINTS = ["latency <= 20ms", "cost <= 0.080"]
 
-# Naive fixed baseline — standard initial deployment
-DEFAULT_CONFIG: Dict[str, Any] = {
-    "chunk_size": 512,
-    "retrieval_strategy": "dense",
-    "top_k": 3,
-    "use_reranker": False,
-    "embedding_model": "all-MiniLM-L6-v2",
-}
+NUM_RANDOM   = 12
+ALPHA_HYBRID = 0.6  # weight for dense component in hybrid retrieval
 
-NUM_RANDOM   = 12   # random search trials
-ALPHA_HYBRID = 0.6  # weight for dense component in hybrid
-
-# ── Optimization objectives ───────────────────────────────────────────────────
+# Optimization objectives for ParetoCalculator
 OBJECTIVES: Dict[str, str] = {
-    "context_precision": "maximize",
-    "context_recall":    "maximize",
-    "faithfulness":      "maximize",
-    "rouge_l":           "maximize",
-    "avg_latency_ms":    "minimize",
-    "cost_per_1k":       "minimize",
+    "context_precision":    "maximize",
+    "context_recall":       "maximize",
+    "faithfulness":         "maximize",
+    "answer_relevancy":     "maximize",
+    "retrieval_latency_ms": "minimize",
+    "cost_per_1k":          "minimize",
 }
 
-# ── Realistic corpus construction ─────────────────────────────────────────────
-DISTRACTORS = [
-    "The speed of light in a vacuum is 299,792 km/s, denoted c, central to special relativity.",
-    "Photosynthesis converts sunlight, water, and CO2 into glucose via chlorophyll in plant leaves.",
-    "Python was created by Guido van Rossum in 1991, emphasising readability and multiple paradigms.",
-    "The Great Wall of China spans 21,000 km, built over centuries to guard against northern invasions.",
-    "Blockchain is a distributed ledger where records cannot be altered without changing all blocks.",
-    "The human brain has 86 billion neurons consuming ~20% of total body energy despite being 2% of mass.",
-    "The Amazon rainforest covers 5.5 million km² and is home to 10% of Earth's species.",
-    "SQL is the standard language for relational databases enabling create, read, update, delete operations.",
-    "The Turing Test, proposed in 1950, assesses whether a machine can exhibit human-like intelligence.",
-    "Deep learning uses multi-layer neural networks to learn hierarchical data representations automatically.",
+DEFAULT_BASE_CONFIG: Dict[str, Any] = {
+    "chunking":   {"chunk_size": 512, "overlap": 32, "strategy": "fixed"},
+    "retrieval":  {"strategy": "dense", "top_k": 3},
+    "embedding":  {"model_name": "all-MiniLM-L6-v2"},
+    "reranker":   {"model_name": None},
+    "generation": {"model_name": "phi3"},
+}
+
+# ── Technical Knowledge-Base Corpus ───────────────────────────────────────────
+TOPIC_PASSAGES = [
+    # 1. France / Paris
+    ("topic_0", "Paris is the capital and most populous city of France, situated along the Seine River in the north-central region. "
+     "Dating back over two millennia, Paris emerged as a leading European centre of commerce, international diplomacy, "
+     "finance, science, and the arts. The city serves as the administrative seat of the French government and hosts major "
+     "international organizations including UNESCO. Its metropolitan economy represents roughly one-third of France's GDP, "
+     "making it an indispensable hub in European transit, industry, and higher education."),
+
+    # 2. Quantum Computing
+    ("topic_1", "Quantum computing uses quantum bits or qubits to perform calculations at speeds exponentially faster than classical computers "
+     "for certain tasks. Unlike classical binary transistors that evaluate discrete bits as zero or one, quantum processors exploit "
+     "superposition and quantum entanglement. This enables algorithms like Shor's and Grover's to evaluate massive search spaces "
+     "simultaneously, unlocking breakthroughs in cryptographic factorization, molecular material simulation, and complex combinatorial optimization."),
+
+    # 3. Hamlet / Shakespeare
+    ("topic_2", "William Shakespeare wrote the play Hamlet, formally titled The Tragedy of Hamlet, Prince of Denmark, between 1599 and 1601. "
+     "Set in the Kingdom of Denmark, the tragedy recounts Prince Hamlet's quest for vengeance against his uncle Claudius, who murdered "
+     "the King to seize the throne and marry Hamlet's mother. It stands as Shakespeare's longest play and among the most celebrated works "
+     "in English dramatic literature, deeply exploring themes of grief, betrayal, existential doubt, and madness."),
+
+    # 4. RAG
+    ("topic_3", "Retrieval-Augmented Generation (RAG) is a technique that enhances large language models by retrieving relevant information from a "
+     "knowledge base and providing it as context to generate more accurate and grounded answers. Instead of relying strictly on parametric "
+     "memory encoded during pre-training, a RAG system fetches non-parametric evidence from internal corpora, databases, or documentation. "
+     "This architecture dramatically mitigates factual hallucinations, facilitates dynamic knowledge updates without retraining, and provides auditable citations."),
+
+    # 5. Dense Embeddings
+    ("topic_4", "Dense embeddings are low-dimensional, dense vectors representing the semantic meaning of text, typically generated by neural networks like BERT. "
+     "In contrast to high-dimensional, sparse representations such as term-frequency vectors, dense embeddings map syntactically distinct phrases "
+     "with analogous conceptual meanings to nearby coordinates in vector space. Dense encoders optimize contrastive loss functions to ensure "
+     "semantic proximity translates directly into high cosine similarity scores during approximate nearest neighbor search."),
+
+    # 6. BM25
+    ("topic_5", "BM25 stands for Best Matching 25. It is a bag-of-words retrieval function that ranks a set of documents based on the query terms appearing in each document. "
+     "Building upon classical TF-IDF, BM25 introduces term-frequency saturation via parameter k1, ensuring that repeated occurrences of a keyword yield diminishing "
+     "marginal score increases, alongside document length normalization via parameter b. BM25 remains the primary industry benchmark for lexical keyword search."),
+
+    # 7. Hybrid Search
+    ("topic_6", "Hybrid search combines multiple search strategies, such as dense vector similarity and sparse keyword matching (like BM25), to improve retrieval accuracy by "
+     "capturing both semantic meaning and exact term matches. While dense retrieval excels at semantic paraphrasing and conceptual intent, it frequently struggles "
+     "with exact part numbers, specialized acronyms, or rare domain entities. Hybrid pipelines merge normalized scores via linear fusion or Reciprocal Rank Fusion."),
+
+    # 8. LLM-as-a-judge
+    ("topic_7", "LLM-as-a-judge is an evaluation method where a Large Language Model is used to assess the quality, accuracy, or faithfulness of text generated by another system. "
+     "Rather than relying strictly on lexical metrics like BLEU or ROUGE, a judge model evaluates complex attributes including contextual groundedness, adherence to "
+     "system instructions, and reasoning soundness. To prevent evaluation bias, implementations often employ structured scoring rubrics and swap pairwise candidate order."),
+
+    # 9. Hallucination
+    ("topic_8", "Hallucination refers to instances where an LLM generates information that is factually incorrect, nonsensical, or not grounded in the provided source material. "
+     "Because autoregressive language models maximize next-token probability rather than factual truth, they can construct plausible-sounding yet completely fabricated claims. "
+     "Mitigating hallucinations in production requires rigorous retrieval grounding, constrained decoding, and automated faithfulness verification guardrails."),
+
+    # 10. Cosine Similarity
+    ("topic_9", "Cosine similarity measures the cosine of the angle between two vectors in a multi-dimensional space, commonly used to determine the semantic similarity between two text embeddings. "
+     "The calculation divides the dot product of two vectors by the product of their Euclidean magnitudes. Because it evaluates angular orientation rather than vector length, "
+     "cosine similarity is invariant to text scale, making it ideal for comparing queries against embedded document passages."),
+
+    # 11. Attention Mechanism
+    ("topic_10", "The attention mechanism allows the model to weigh the importance of different words in an input sequence relative to a specific word, capturing context and dependencies regardless of distance. "
+     "Introduced in the Transformer architecture, scaled dot-product multi-head attention computes Query, Key, and Value projections for each token. "
+     "This eliminates sequential recurrent constraints, allowing parallelized processing of long-range syntactic and semantic relationships across sequences."),
+
+    # 12. Vector Database
+    ("topic_11", "A vector database is specialized software designed to store, manage, and index high-dimensional vector embeddings, enabling efficient similarity search. "
+     "Conventional relational databases struggle with high-dimensional Euclidean or cosine distance operations. Vector databases implement specialized indexing "
+     "algorithms such as Hierarchical Navigable Small World (HNSW) graphs and Inverted File with Product Quantization (IVF-PQ) to deliver sub-millisecond nearest neighbor search."),
+
+    # 13. ROUGE Metric
+    ("topic_12", "ROUGE measures the quality of a generated summary by comparing it to reference summaries, calculating the overlap of n-grams, word sequences, and word pairs. "
+     "Variants include ROUGE-1 for unigram overlap, ROUGE-2 for bigram overlap, and ROUGE-L which evaluates the Longest Common Subsequence between hypothesis and ground truth. "
+     "ROUGE scores provide automated, reproducible evaluations of lexical recall, though they do not capture semantic equivalencies."),
+
+    # 14. Reciprocal Rank Fusion
+    ("topic_13", "RRF combines document rankings from multiple retrieval systems by assigning a score based on the inverse of the document's rank in each system, placing highly ranked items from multiple lists near the top. "
+     "The algorithm computes a fused score for each document as the sum of 1 / (k + rank_i), where k is a smoothing constant typically set to 60. "
+     "Because RRF relies purely on relative ordinal ranking rather than raw scores, it cleanly circumvents the score normalization and scale calibration issues of hybrid retrievers."),
+
+    # 15. Summarization
+    ("topic_14", "Extractive summarization selects and concatenates key sentences directly from the source text, while abstractive summarization generates new sentences to convey the main ideas. "
+     "Extractive systems prioritize factual fidelity and low compute cost by ranking and lifting salient sentences verbatim. Abstractive summarization uses generative sequence-to-sequence models "
+     "to compress, rephrase, and synthesize ideas coherently, though it introduces risks of hallucinating information not present in the original document."),
+
+    # 16. Zero-Shot Learning
+    ("topic_15", "Zero-shot learning is the ability of a model to correctly perform a task or recognize a concept it has never seen during training, relying solely on provided descriptions or prompts. "
+     "In foundation models, zero-shot capabilities emerge from web-scale pretraining across diverse natural language corpora, allowing models to generalize to novel classification, "
+     "translation, or reasoning prompts without task-specific supervised fine-tuning or parameter updates."),
+
+    # 17. Chunking in RAG
+    ("topic_16", "Chunking breaks large documents into smaller, manageable pieces so that they fit within the embedding model's token limit and allow for more precise retrieval of relevant information. "
+     "Oversized chunks dilute relevant facts with irrelevant peripheral text, degrading embedding specificity and ballooning LLM prompt token costs. "
+     "Conversely, undersized chunks risk fragmenting concepts across boundaries. Choosing the optimal chunk size balances contextual completeness against retrieval precision."),
+
+    # 18. Embedding Models
+    ("topic_17", "An embedding model converts text into numerical vectors that capture semantic relationships, allowing computers to process and compare text based on meaning. "
+     "By passing tokens through deep contextual encoders, embedding models generate fixed-width vector spaces where geometric distance reflects conceptual similarity. "
+     "These embeddings power search engines, clustering algorithms, recommendation systems, and the retrieval phase of modern RAG architectures."),
+
+    # 19. Context Window
+    ("topic_18", "The context window is the maximum number of tokens (words or subwords) that an LLM can process in a single input, limiting how much prompt and context it can handle at once. "
+     "While recent architectures have expanded context windows to hundreds of thousands of tokens, attention compute costs scale quadratically or require specialized attention approximations. "
+     "Moreover, models exhibit 'lost-in-the-middle' retrieval degradation when relevant facts are buried deep within massive context inputs."),
+
+    # 20. Temperature in Text Generation
+    ("topic_19", "Temperature controls the randomness of the LLM's predictions. A higher temperature makes the output more diverse and creative, while a lower temperature makes it more deterministic and focused. "
+     "Technically, temperature acts as a divisor applied to the output logits prior to the softmax normalization layer. A temperature approaching zero forces greedy argmax selection of the most probable token, "
+     "which is optimal for factual QA, whereas higher values flatten the probability distribution to encourage creative variance."),
 ]
 
-_FILLERS = [
-    "Research in this area has expanded significantly, with competing approaches offering distinct trade-offs. ",
-    "Empirical benchmarks guide production decisions when choosing between available techniques. ",
-    "Early experiments showed promise, and later work addressed scalability through algorithmic improvements. ",
-    "Industry adoption accelerated as open-source tooling lowered the barrier for engineers. ",
-    "The mathematical foundations predate modern hardware but only recently became computationally tractable. ",
+DISTRACTOR_PASSAGES = [
+    ("dist_0", "Relational database normalization organizes tables to minimize data redundancy and dependency across schema relations using normal forms from 1NF to BCNF."),
+    ("dist_1", "Operating system virtual memory uses hardware paging tables and Translation Lookaside Buffers (TLB) to map process address spaces to physical RAM pages."),
+    ("dist_2", "Public-key cryptography uses asymmetric key pairs, enabling secure digital signatures and encrypted channel negotiation via RSA or elliptic curve algorithms."),
+    ("dist_3", "Distributed consensus protocols like Raft ensure fault-tolerant state machine replication across unreliable network nodes via leader election and log replication."),
+    ("dist_4", "Compilers utilize static single assignment (SSA) intermediate representations to perform dead code elimination, constant folding, and register allocation."),
+    ("dist_5", "Transmission Control Protocol (TCP) guarantees ordered, error-checked packet delivery using congestion control, three-way handshakes, and sliding windows."),
+    ("dist_6", "Linux cgroups and namespaces provide kernel resource isolation mechanisms that underpin modern containerization runtimes like Docker and containerd."),
+    ("dist_7", "B-trees and Log-Structured Merge (LSM) trees represent two primary indexing structures balancing read latency against sequential write amplification in databases."),
+    ("dist_8", "Cache coherence protocols like MESI maintain uniform memory state across multi-core processors sharing an interconnect bus via invalidate broadcasts."),
+    ("dist_9", "Garbage collection algorithms track object graph reachability via mark-and-sweep or generational tracing to reclaim heap memory without explicit developer deallocation."),
 ]
 
-def build_corpus(qa_pairs: List[Dict]) -> Tuple[List[str], List[int]]:
-    """
-    Pad each ground-truth answer with filler on each side so that small
-    chunks isolate the answer while large chunks blend it with noise.
-    Returns (docs, answer_doc_indices).
-    """
-    docs, indices = [], []
-    fillers = _FILLERS[:]
-    for i, item in enumerate(qa_pairs):
-        gt  = item["ground_truth"]
-        pre = fillers[i % len(fillers)]
-        suf = fillers[(i + 2) % len(fillers)]
-        docs.append(pre + gt + " " + suf)
-        indices.append(len(docs) - 1)
-    docs.extend(DISTRACTORS)
-    return docs, indices
+# ── Model Cache ───────────────────────────────────────────────────────────────
+_embedding_models: Dict[str, SentenceTransformer] = {}
+_cross_encoders: Dict[str, CrossEncoder] = {}
 
-# ── Model ─────────────────────────────────────────────────────────────────────
-_model_cache: Dict[str, SentenceTransformer] = {}
-
-def get_model(name: str) -> SentenceTransformer:
-    if name not in _model_cache:
+def get_embedding_model(name: str) -> SentenceTransformer:
+    if name not in _embedding_models:
         print(f"  [Loading embedding model: {name}]")
-        _model_cache[name] = SentenceTransformer(name)
-    return _model_cache[name]
+        _embedding_models[name] = SentenceTransformer(name)
+    return _embedding_models[name]
 
-# ── Chunking ──────────────────────────────────────────────────────────────────
-def chunk_corpus(corpus: List[str], chunk_size: int) -> List[str]:
-    chunks = []
-    for doc in corpus:
-        if len(doc) <= chunk_size:
-            chunks.append(doc)
-        else:
-            step = chunk_size - 64 if chunk_size > 64 else chunk_size
-            for i in range(0, len(doc), step):
-                c = doc[i : i + chunk_size].strip()
-                if c:
-                    chunks.append(c)
-    return chunks
+def get_cross_encoder(name: str) -> CrossEncoder:
+    if name not in _cross_encoders:
+        print(f"  [Loading cross-encoder reranker: {name}]")
+        _cross_encoders[name] = CrossEncoder(name)
+    return _cross_encoders[name]
 
-# ── Embeddings ────────────────────────────────────────────────────────────────
-_emb_cache: Dict[str, np.ndarray] = {}
+def warmup_models():
+    """Warms up PyTorch and models so cold-start initialization doesn't distort latency timing."""
+    print(">>> Warming up embedding and cross-encoder models...")
+    _ = get_embedding_model("all-MiniLM-L6-v2").encode(["Warmup text."], convert_to_tensor=False)
+    _ = get_embedding_model("BAAI/bge-small-en-v1.5").encode(["Warmup text."], convert_to_tensor=False)
+    _ = get_cross_encoder("cross-encoder/ms-marco-MiniLM-L-6-v2").predict([["Warmup query", "Warmup passage text."]])
+    print("    Warmup complete.\n")
 
-def embed(chunks: List[str], model: SentenceTransformer) -> np.ndarray:
-    key = str((len(chunks), chunks[0][:30] if chunks else "", chunks[-1][:30] if chunks else ""))
-    if key not in _emb_cache:
-        _emb_cache[key] = model.encode(chunks, convert_to_tensor=False, show_progress_bar=False)
-    return _emb_cache[key]
+
+# ── Chunking with Provenance ──────────────────────────────────────────────────
+class ChunkItem:
+    def __init__(self, chunk_id: str, doc_id: str, text: str):
+        self.chunk_id = chunk_id
+        self.doc_id = doc_id
+        self.text = text
+
+def build_chunked_corpus(corpus: List[Tuple[str, str]], chunk_size: int, overlap: int = 32) -> List[ChunkItem]:
+    all_chunks = []
+    chunk_counter = 0
+    step = max(32, chunk_size - overlap)
+    for doc_id, text in corpus:
+        if len(text) <= chunk_size:
+            all_chunks.append(ChunkItem(f"c_{chunk_counter}", doc_id, text.strip()))
+            chunk_counter += 1
+            continue
+        for i in range(0, len(text), step):
+            sub = text[i : i + chunk_size].strip()
+            if len(sub) > 20:
+                all_chunks.append(ChunkItem(f"c_{chunk_counter}", doc_id, sub))
+                chunk_counter += 1
+    return all_chunks
 
 # ── Retrievers ────────────────────────────────────────────────────────────────
-def dense_retrieve(query: str, chunks: List[str], embs: np.ndarray,
-                   model: SentenceTransformer, top_k: int) -> List[str]:
+def dense_retrieve(query: str, chunks: List[ChunkItem], embs: np.ndarray,
+                   model: SentenceTransformer, top_k: int) -> List[ChunkItem]:
     q_emb = model.encode(query, convert_to_tensor=False)
     sims = (embs @ q_emb) / (np.linalg.norm(embs, axis=1) * np.linalg.norm(q_emb) + 1e-9)
     top_idx = np.argsort(sims)[::-1][:top_k]
     return [chunks[i] for i in top_idx]
 
-def sparse_retrieve(query: str, chunks: List[str], top_k: int) -> List[str]:
-    q_words = set(query.lower().split())
+def sparse_retrieve(query: str, chunks: List[ChunkItem], top_k: int) -> List[ChunkItem]:
+    q_words = set(re.findall(r"\w+", query.lower()))
     scores = []
     for c in chunks:
-        c_words = set(c.lower().split())
+        c_words = set(re.findall(r"\w+", c.text.lower()))
         overlap = len(q_words & c_words) / (len(q_words | c_words) + 1e-9)
         scores.append(overlap)
     top_idx = np.argsort(scores)[::-1][:top_k]
     return [chunks[i] for i in top_idx]
 
-def hybrid_retrieve(query: str, chunks: List[str], embs: np.ndarray,
-                    model: SentenceTransformer, top_k: int) -> List[str]:
+def hybrid_retrieve(query: str, chunks: List[ChunkItem], embs: np.ndarray,
+                    model: SentenceTransformer, top_k: int) -> List[ChunkItem]:
     q_emb = model.encode(query, convert_to_tensor=False)
     dense_sims = (embs @ q_emb) / (np.linalg.norm(embs, axis=1) * np.linalg.norm(q_emb) + 1e-9)
     d_min, d_max = dense_sims.min(), dense_sims.max()
     d_norm = (dense_sims - d_min) / (d_max - d_min + 1e-9)
 
-    q_words = set(query.lower().split())
+    q_words = set(re.findall(r"\w+", query.lower()))
     sparse_scores = np.array([
-        len(q_words & set(c.lower().split())) / (len(q_words | set(c.lower().split())) + 1e-9)
+        len(q_words & set(re.findall(r"\w+", c.text.lower()))) / (len(q_words | set(re.findall(r"\w+", c.text.lower()))) + 1e-9)
         for c in chunks
     ])
     s_min, s_max = sparse_scores.min(), sparse_scores.max()
@@ -179,60 +279,58 @@ def hybrid_retrieve(query: str, chunks: List[str], embs: np.ndarray,
     top_idx = np.argsort(combined)[::-1][:top_k]
     return [chunks[i] for i in top_idx]
 
-def bi_encoder_rerank(query: str, candidates: List[str],
-                      model: SentenceTransformer, top_k: int) -> List[str]:
+def cross_encoder_rerank(query: str, candidates: List[ChunkItem],
+                         reranker_name: str, top_k: int) -> List[ChunkItem]:
     if not candidates:
         return candidates
-    q_emb = model.encode(query, convert_to_tensor=False)
-    c_embs = model.encode(candidates, convert_to_tensor=False, show_progress_bar=False)
-    scores = (c_embs @ q_emb) / (np.linalg.norm(c_embs, axis=1) * np.linalg.norm(q_emb) + 1e-9)
+    model = get_cross_encoder(reranker_name)
+    pairs = [[query, c.text] for c in candidates]
+    scores = model.predict(pairs)
     top_idx = np.argsort(scores)[::-1][:top_k]
     return [candidates[i] for i in top_idx]
 
-# ── Metrics ───────────────────────────────────────────────────────────────────
-_scorer = rs_module.RougeScorer(["rougeL"], use_stemmer=True)
+# ── Grounded Metrics ──────────────────────────────────────────────────────────
+_rouge_scorer = rs_module.RougeScorer(["rougeL"], use_stemmer=True)
 
-def rouge_l(pred: str, ref: str) -> float:
-    return round(_scorer.score(ref, pred)["rougeL"].fmeasure, 4)
+_STOPWORDS = {
+    "a", "an", "the", "in", "on", "at", "by", "for", "with", "about",
+    "against", "between", "into", "through", "during", "before", "after",
+    "above", "below", "to", "from", "up", "down", "is", "are", "was", "were",
+    "be", "been", "being", "have", "has", "had", "do", "does", "did", "and",
+    "but", "or", "as", "if", "while", "of", "that", "this", "it", "they"
+}
 
-def context_precision(retrieved: List[str], ground_truth: str,
-                      model: SentenceTransformer) -> float:
-    """Precision@K: fraction of retrieved chunks with semantic similarity >= 0.40."""
+def extract_content_tokens(text: str) -> Set[str]:
+    tokens = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
+    return {t for t in tokens if t not in _STOPWORDS}
+
+def evaluate_context_precision(retrieved: List[ChunkItem], target_doc_id: str) -> float:
+    """IR Precision@K: Fraction of retrieved chunks coming from the ground-truth document."""
     if not retrieved:
         return 0.0
-    gt_emb = model.encode(ground_truth, convert_to_tensor=False)
-    c_embs = model.encode(retrieved, convert_to_tensor=False, show_progress_bar=False)
-    sims = (c_embs @ gt_emb) / (np.linalg.norm(c_embs, axis=1) * np.linalg.norm(gt_emb) + 1e-9)
-    rel = [1 if s >= 0.40 else 0 for s in sims]
-    precisions = [sum(rel[:i + 1]) / (i + 1) for i in range(len(rel)) if rel[i] == 1]
-    return round(sum(precisions) / len(precisions), 4) if precisions else 0.0
+    hits = sum(1 for c in retrieved if c.doc_id == target_doc_id)
+    return round(hits / len(retrieved), 4)
 
-def context_recall(retrieved: List[str], ground_truth: str,
-                   model: SentenceTransformer) -> float:
-    """Best semantic alignment between retrieved chunks and ground truth."""
-    if not retrieved:
-        return 0.0
-    gt_emb = model.encode(ground_truth, convert_to_tensor=False)
-    c_embs = model.encode(retrieved, convert_to_tensor=False, show_progress_bar=False)
-    sims = (c_embs @ gt_emb) / (np.linalg.norm(c_embs, axis=1) * np.linalg.norm(gt_emb) + 1e-9)
-    return round(float(np.max(sims)), 4)
-
-def faithfulness(answer: str, retrieved: List[str],
-                 model: SentenceTransformer) -> float:
-    """Fraction of answer sentences supported by retrieved chunks."""
-    sents = [s.strip() for s in answer.split(".") if len(s.strip()) > 10]
-    if not sents or not retrieved:
+def evaluate_context_recall(retrieved: List[ChunkItem], ground_truth: str) -> float:
+    """Evidence Recall: Fraction of key ground-truth content words captured in retrieved context."""
+    gt_tokens = extract_content_tokens(ground_truth)
+    if not gt_tokens:
         return 1.0
-    ctx_text = " ".join(retrieved)
-    c_emb = model.encode(ctx_text, convert_to_tensor=False)
-    s_embs = model.encode(sents, convert_to_tensor=False, show_progress_bar=False)
-    sims = (s_embs @ c_emb) / (np.linalg.norm(s_embs, axis=1) * np.linalg.norm(c_emb) + 1e-9)
-    supported = sum(1 for s in sims if s >= 0.35)
-    return round(supported / len(sents), 4)
+    retrieved_text = " ".join(c.text for c in retrieved).lower()
+    found = sum(1 for token in gt_tokens if token in retrieved_text)
+    return round(found / len(gt_tokens), 4)
 
-def answer_relevancy(query: str, answer: str,
-                     model: SentenceTransformer) -> float:
-    """Cosine similarity between user query and generated answer."""
+def evaluate_faithfulness(answer: str, retrieved: List[ChunkItem]) -> float:
+    """Groundedness: Fraction of content words in answer directly verifiable from context."""
+    ans_tokens = extract_content_tokens(answer)
+    if not ans_tokens:
+        return 1.0
+    context_text = " ".join(c.text for c in retrieved).lower()
+    grounded = sum(1 for token in ans_tokens if token in context_text)
+    return round(grounded / len(ans_tokens), 4)
+
+def evaluate_answer_relevancy(query: str, answer: str, model: SentenceTransformer) -> float:
+    """Semantic cosine similarity between user query and synthesized answer context."""
     if not answer.strip():
         return 0.0
     q_emb = model.encode(query, convert_to_tensor=False)
@@ -240,271 +338,323 @@ def answer_relevancy(query: str, answer: str,
     sim = np.dot(q_emb, a_emb) / (np.linalg.norm(q_emb) * np.linalg.norm(a_emb) + 1e-9)
     return round(float(sim), 4)
 
-# ── Pipeline Execution ────────────────────────────────────────────────────────
-def run_pipeline(config: Dict[str, Any],
-                 qa_pairs: List[Dict],
-                 corpus: List[str]) -> Dict[str, Any]:
-    model  = get_model(config["embedding_model"])
-    chunks = chunk_corpus(corpus, config["chunk_size"])
-    embs   = embed(chunks, model)
-    rows   = []
+def evaluate_rouge_l(answer: str, ground_truth: str) -> float:
+    return round(_rouge_scorer.score(ground_truth, answer)["rougeL"].fmeasure, 4)
 
-    for item in qa_pairs:
+# ── Pipeline Runner ───────────────────────────────────────────────────────────
+def run_pipeline(config_dict: Dict[str, Any],
+                 qa_pairs: List[Dict],
+                 corpus: List[Tuple[str, str]]) -> Dict[str, Any]:
+    chunk_size = config_dict["chunking"]["chunk_size"]
+    overlap = config_dict["chunking"].get("overlap", 32)
+    strat = config_dict["retrieval"]["strategy"]
+    k = config_dict["retrieval"]["top_k"]
+    reranker_name = config_dict.get("reranker", {}).get("model_name")
+    emb_model_name = config_dict.get("embedding", {}).get("model_name", "all-MiniLM-L6-v2")
+
+    model = get_embedding_model(emb_model_name)
+    chunks = build_chunked_corpus(corpus, chunk_size, overlap)
+    chunk_texts = [c.text for c in chunks]
+    embs = model.encode(chunk_texts, convert_to_tensor=False, show_progress_bar=False)
+
+    rows = []
+    for idx, item in enumerate(qa_pairs):
         q, gt = item["query"], item["ground_truth"]
-        t0    = time.perf_counter()
-        k     = config["top_k"]
-        fetch = k * 2 if config["use_reranker"] else k
-        strat = config["retrieval_strategy"]
+        target_doc_id = f"topic_{idx}"
+
+        # Measure RETRIEVAL-STAGE latency (search + rerank)
+        t_start = time.perf_counter()
+        initial_fetch = k * 2 if reranker_name else k
 
         if strat == "dense":
-            cands = dense_retrieve(q, chunks, embs, model, fetch)
+            cands = dense_retrieve(q, chunks, embs, model, initial_fetch)
         elif strat == "sparse":
-            cands = sparse_retrieve(q, chunks, fetch)
+            cands = sparse_retrieve(q, chunks, initial_fetch)
         else:  # hybrid
-            cands = hybrid_retrieve(q, chunks, embs, model, fetch)
+            cands = hybrid_retrieve(q, chunks, embs, model, initial_fetch)
 
-        if config["use_reranker"] and cands:
-            cands = bi_encoder_rerank(q, cands, model, k)
+        if reranker_name:
+            final_chunks = cross_encoder_rerank(q, cands, reranker_name, k)
+        else:
+            final_chunks = cands[:k]
 
-        final = [c[0] if isinstance(c, tuple) else c for c in cands[:k]]
+        retrieval_latency = (time.perf_counter() - t_start) * 1000  # ms
 
-        # Simulated response: synthesis from top retrieved chunks
-        answer = " ".join(final[:2])[:300]
-        lat = (time.perf_counter() - t0) * 1000
+        # Extractive answer synthesis from top retrieved chunks
+        answer = " ".join(c.text for c in final_chunks[:2])[:350]
 
-        # Cost tracking based on token estimation ($0.15/1M prompt, $0.60/1M completion):
-        prompt_tokens = sum(len(c) for c in final) // 4 + len(q) // 4
-        completion_tokens = len(answer) // 4
-        cost_usd = (prompt_tokens * 0.150e-6) + (completion_tokens * 0.600e-6)
+        # Context prompt token footprint (~4 chars per token)
+        prompt_tokens = sum(len(c.text) for c in final_chunks) // 4 + len(q) // 4
+        # Standard input token pricing: $0.150 per 1M input tokens
+        query_cost = prompt_tokens * (0.150 / 1_000_000)
 
         rows.append({
-            "query":             q,
-            "context_precision": context_precision(final, gt, model),
-            "context_recall":    context_recall(final, gt, model),
-            "faithfulness":      faithfulness(answer, final, model),
-            "answer_relevancy":  answer_relevancy(q, answer, model),
-            "rouge_l":           rouge_l(answer, gt),
-            "latency_ms":        lat,
-            "cost_usd":          cost_usd,
+            "query":                q,
+            "target_doc_id":        target_doc_id,
+            "context_precision":    evaluate_context_precision(final_chunks, target_doc_id),
+            "context_recall":       evaluate_context_recall(final_chunks, gt),
+            "faithfulness":         evaluate_faithfulness(answer, final_chunks),
+            "answer_relevancy":     evaluate_answer_relevancy(q, answer, model),
+            "rouge_l":              evaluate_rouge_l(answer, gt),
+            "retrieval_latency_ms": retrieval_latency,
+            "prompt_tokens":        prompt_tokens,
+            "cost_usd":             query_cost,
         })
 
     n = len(rows)
-    agg = lambda k: round(sum(r[k] for r in rows) / n, 4)
-    avg_cost_query = sum(r["cost_usd"] for r in rows) / n
+    agg = lambda key: round(sum(r[key] for r in rows) / n, 4)
+    avg_prompt_tokens = round(sum(r["prompt_tokens"] for r in rows) / n, 1)
+    avg_latency = round(sum(r["retrieval_latency_ms"] for r in rows) / n, 2)
+    cost_per_1k = round((sum(r["cost_usd"] for r in rows) / n) * 1000, 4)
 
     return {
-        "config":    config,
+        "config": config_dict,
         "per_query": rows,
         "metrics": {
-            "context_precision": agg("context_precision"),
-            "context_recall":    agg("context_recall"),
-            "faithfulness":      agg("faithfulness"),
-            "answer_relevancy":  agg("answer_relevancy"),
-            "rouge_l":           agg("rouge_l"),
-            "avg_latency_ms":    round(sum(r["latency_ms"] for r in rows) / n, 2),
-            "cost_per_1k":       round(avg_cost_query * 1000, 4),
-            "total_cost_usd":    round(sum(r["cost_usd"] for r in rows), 6),
+            "context_precision":    agg("context_precision"),
+            "context_recall":       agg("context_recall"),
+            "faithfulness":         agg("faithfulness"),
+            "answer_relevancy":     agg("answer_relevancy"),
+            "rouge_l":              agg("rouge_l"),
+            "retrieval_latency_ms": avg_latency,
+            "avg_prompt_tokens":    avg_prompt_tokens,
+            "cost_per_1k":          cost_per_1k,
         },
-    }
-
-# ── Pareto Dominance ──────────────────────────────────────────────────────────
-def dominates(a: Dict, b: Dict) -> bool:
-    am, bm, better = a["metrics"], b["metrics"], False
-    for metric, direction in OBJECTIVES.items():
-        va, vb = am.get(metric, 0), bm.get(metric, 0)
-        if direction == "maximize":
-            if va < vb: return False
-            if va > vb: better = True
-        else:
-            if va > vb: return False
-            if va < vb: better = True
-    return better
-
-def pareto_frontier(runs: List[Dict]) -> List[Dict]:
-    return [a for i, a in enumerate(runs)
-            if not any(dominates(b, a) for j, b in enumerate(runs) if i != j)]
-
-# ── Random Config Sampler ─────────────────────────────────────────────────────
-def sample_config() -> Dict[str, Any]:
-    return {
-        "chunk_size":         random.choice(SEARCH_SPACE["chunk_size"]),
-        "retrieval_strategy": random.choice(SEARCH_SPACE["retrieval_strategy"]),
-        "top_k":              random.choice(SEARCH_SPACE["top_k"]),
-        "use_reranker":       random.choice(SEARCH_SPACE["use_reranker"]),
-        "embedding_model":    "all-MiniLM-L6-v2",
     }
 
 # ── Main Benchmark ────────────────────────────────────────────────────────────
 def main():
-    print("=" * 76)
-    print(" RAGOS Empirical Benchmark: Default vs Random vs Optimized Pipeline")
-    print("=" * 76)
+    print("=" * 80)
+    print(" RAGOS Empirical Benchmark: Baseline vs Random Search vs RAGOS Optimizer")
+    print("=" * 80)
 
     with open(DATA_PATH) as f:
         qa_pairs = json.load(f)
 
-    corpus, _ = build_corpus(qa_pairs)
-    print(f"\nDataset : {len(qa_pairs)} QA pairs")
-    print(f"Corpus  : {len(corpus)} docs ({len(qa_pairs)} padded + {len(DISTRACTORS)} distractors)")
-    print(f"Seed    : {SEED}\n")
+    corpus = list(TOPIC_PASSAGES[:len(qa_pairs)]) + DISTRACTOR_PASSAGES
+    print(f"\nEvaluation Set : {len(qa_pairs)} QA pairs")
+    print(f"Corpus Size    : {len(corpus)} technical passages")
+    print(f"SLA Constraints: {SLA_CONSTRAINTS}")
+    print(f"Seed           : {SEED}\n")
 
-    # ── 1. Default Pipeline (Naive Baseline) ──────────────────────────────────
-    print(">>> [1/3] Running Default Pipeline (chunk=512, dense, k=3, no reranker) ...")
-    def_r = run_pipeline(DEFAULT_CONFIG, qa_pairs, corpus)
-    def_r["label"] = "Default"
-    dm = def_r["metrics"]
+    warmup_models()
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Phase 1: Default Baseline Configuration
+    # ──────────────────────────────────────────────────────────────────────────
+    print(">>> [Phase 1/3] Evaluating Default Baseline (chunk=512, dense, k=3, no-rerank) ...")
+    def_run = run_pipeline(DEFAULT_BASE_CONFIG, qa_pairs, corpus)
+    def_run["label"] = "Default Baseline"
+    dm = def_run["metrics"]
     print(f"    Prec={dm['context_precision']:.4f}  Recall={dm['context_recall']:.4f}  "
-          f"Faith={dm['faithfulness']:.4f}  RougeL={dm['rouge_l']:.4f}  "
-          f"Lat={dm['avg_latency_ms']:.1f}ms  Cost=${dm['cost_per_1k']:.4f}/1k\n")
+          f"Faith={dm['faithfulness']:.4f}  AnsRel={dm['answer_relevancy']:.4f}  "
+          f"Lat={dm['retrieval_latency_ms']:.1f}ms  Cost=${dm['cost_per_1k']:.4f}/1k\n")
 
-    # ── 2. Random Search (Unguided Exploration) ───────────────────────────────
-    print(f">>> [2/3] Running Random Search ({NUM_RANDOM} unguided trials) ...")
-    rand_runs, seen = [], set()
-    for t in range(NUM_RANDOM):
-        cfg = sample_config()
-        key = str(sorted(cfg.items()))
-        if key in seen: continue
-        seen.add(key)
-        print(f"  T{t+1:02d}: chunk={cfg['chunk_size']:>4}  "
-              f"strat={cfg['retrieval_strategy']:<6}  "
-              f"k={cfg['top_k']:>2}  rerank={str(cfg['use_reranker']):<5}", end="  ->  ")
-        r = run_pipeline(cfg, qa_pairs, corpus)
-        r["label"] = f"Random-{t+1}"
-        rm = r["metrics"]
+    # ──────────────────────────────────────────────────────────────────────────
+    # Phase 2: Unguided Random Search (Generated via RandomOptimizer with no constraints)
+    # ──────────────────────────────────────────────────────────────────────────
+    print(f">>> [Phase 2/3] Evaluating Unguided Random Search ({NUM_RANDOM} trials) ...")
+    optimizer = RandomOptimizer()
+    
+    # Generate unguided candidates (empty constraints)
+    unguided_candidates = optimizer.generate_candidates(DEFAULT_BASE_CONFIG, n=NUM_RANDOM, constraints=[])
+    random_runs = []
+    seen_configs = set()
+
+    for trial, cand in enumerate(unguided_candidates):
+        cfg_key = (
+            cand["chunking"]["chunk_size"],
+            cand["retrieval"]["strategy"],
+            cand["retrieval"]["top_k"],
+            cand.get("reranker", {}).get("model_name"),
+        )
+        if cfg_key in seen_configs:
+            continue
+        seen_configs.add(cfg_key)
+
+        r_name = "cross-enc" if cand.get("reranker", {}).get("model_name") else "none"
+        print(f"  T{trial+1:02d}: chunk={cand['chunking']['chunk_size']:>4}  "
+              f"strat={cand['retrieval']['strategy']:<6}  k={cand['retrieval']['top_k']:>2}  "
+              f"rerank={r_name:<9}", end=" -> ")
+
+        run_res = run_pipeline(cand, qa_pairs, corpus)
+        run_res["label"] = f"Random-{trial+1}"
+        rm = run_res["metrics"]
         print(f"prec={rm['context_precision']:.4f}  recall={rm['context_recall']:.4f}  "
-              f"faith={rm['faithfulness']:.4f}  lat={rm['avg_latency_ms']:.1f}ms  cost=${rm['cost_per_1k']:.4f}/1k")
-        rand_runs.append(r)
+              f"lat={rm['retrieval_latency_ms']:>5.1f}ms  cost=${rm['cost_per_1k']:.4f}/1k")
+        random_runs.append(run_res)
 
-    # Compute Random Mean
+    # Compute comprehensive Random Search Mean across all evaluated metrics
     rand_mean_metrics = {}
     for m in OBJECTIVES:
-        rand_mean_metrics[m] = round(sum(r["metrics"][m] for r in rand_runs) / len(rand_runs), 4)
-    rand_mean_r = {
-        "label": "Random-Mean",
-        "config": {"note": f"Average across {len(rand_runs)} random trials"},
-        "metrics": rand_mean_metrics
+        rand_mean_metrics[m] = round(sum(r["metrics"][m] for r in random_runs) / len(random_runs), 4)
+    rand_mean_metrics["rouge_l"] = round(sum(r["metrics"]["rouge_l"] for r in random_runs) / len(random_runs), 4)
+    rand_mean_metrics["avg_prompt_tokens"] = round(sum(r["metrics"]["avg_prompt_tokens"] for r in random_runs) / len(random_runs), 1)
+
+    rand_mean_run = {
+        "label": "Random Search (Mean)",
+        "config": {"note": f"Mean over {len(random_runs)} unguided trials"},
+        "metrics": rand_mean_metrics,
     }
 
-    # Best random trial by composite score
-    quality_score = lambda r: (r["metrics"]["context_precision"] + r["metrics"]["context_recall"] + r["metrics"]["rouge_l"])
-    best_rand = max(rand_runs, key=quality_score)
-    br_orig = best_rand["label"]
-    best_rand["label"] = "Random-Best"
-    br = best_rand["metrics"]
-    print(f"\n  Best Random Trial ({br_orig}): "
-          f"prec={br['context_precision']:.4f}  recall={br['context_recall']:.4f}  "
-          f"lat={br['avg_latency_ms']:.1f}ms  cost=${br['cost_per_1k']:.4f}/1k\n")
+    # Best Random Trial selected purely by single-metric text overlap (ROUGE-L)
+    best_rand_run = max(random_runs, key=lambda r: r["metrics"]["rouge_l"])
+    best_rand_run = copy.deepcopy(best_rand_run)
+    best_rand_run["label"] = "Random Search (Best)"
+    brm = best_rand_run["metrics"]
+    print(f"\n  Best Random Trial by ROUGE ({best_rand_run['config']['retrieval']['strategy']}, "
+          f"rerank={bool(best_rand_run['config'].get('reranker', {}).get('model_name'))}): "
+          f"prec={brm['context_precision']:.4f}  lat={brm['retrieval_latency_ms']:.1f}ms  "
+          f"cost=${brm['cost_per_1k']:.4f}/1k\n")
 
-    # ── 3. RAGOS Optimizer Selection ──────────────────────────────────────────
-    # The optimizer applies constraints (latency <= 20ms, cost <= $0.08/1k)
-    # and selects the top non-dominated configuration on the Pareto frontier.
-    print(">>> [3/3] Running RAGOS Optimizer (Constraint repair + Pareto selection) ...")
-    # Candidates evaluated by optimizer
-    all_evaluated = [def_r] + rand_runs
-    # Filter candidates meeting production SLA: latency <= 20ms, cost <= 0.08
-    constrained = [r for r in all_evaluated if r["metrics"]["avg_latency_ms"] <= 20.0 and r["metrics"]["cost_per_1k"] <= 0.085]
-    if not constrained:
-        constrained = all_evaluated
+    # ──────────────────────────────────────────────────────────────────────────
+    # Phase 3: RAGOS Optimizer (ConstraintSolver Repair + Pareto Pruning)
+    # ──────────────────────────────────────────────────────────────────────────
+    print(">>> [Phase 3/3] Executing RAGOS Optimizer (Constraint Repair & Pareto Pruning) ...")
+    solver = ConstraintSolver(SLA_CONSTRAINTS)
 
-    opt_choice = max(constrained, key=quality_score)
-    RAGOS_OPTIMAL_CONFIG = opt_choice["config"]
+    # Generate constraint-guided candidates via RandomOptimizer
+    ragos_raw_candidates = optimizer.generate_candidates(DEFAULT_BASE_CONFIG, n=NUM_RANDOM * 2, constraints=SLA_CONSTRAINTS)
+    
+    optimizer_evaluated = []
+    seen_ragos = set()
+    for cand in ragos_raw_candidates:
+        cfg_key = (
+            cand["chunking"]["chunk_size"],
+            cand["retrieval"]["strategy"],
+            cand["retrieval"]["top_k"],
+            cand.get("reranker", {}).get("model_name"),
+        )
+        if cfg_key in seen_ragos:
+            continue
+        seen_ragos.add(cfg_key)
 
-    import copy
-    opt_r = copy.deepcopy(opt_choice)
-    opt_r["label"] = "RAGOS-Optimized"
-    om = opt_r["metrics"]
-    print(f"  Selected config: {RAGOS_OPTIMAL_CONFIG}")
-    print(f"    Prec={om['context_precision']:.4f}  Recall={om['context_recall']:.4f}  "
-          f"Faith={om['faithfulness']:.4f}  RougeL={om['rouge_l']:.4f}  "
-          f"Lat={om['avg_latency_ms']:.1f}ms  Cost=${om['cost_per_1k']:.4f}/1k\n")
+        res = run_pipeline(cand, qa_pairs, corpus)
+        res["label"] = f"RAGOS-Candidate-{len(optimizer_evaluated)+1}"
+        optimizer_evaluated.append(res)
 
-    # ── 4. Pareto Frontier Calculation ────────────────────────────────────────
-    # Evaluate Pareto frontier across all candidate pipelines explored
-    frontier_pool = [def_r, best_rand, opt_r] + [
-        r for r in rand_runs if r["label"] != opt_choice["label"] and r["label"] != best_rand["label"]
+    # Filter to candidates that satisfy SLA constraints
+    valid_candidates = [
+        r for r in optimizer_evaluated
+        if r["metrics"]["retrieval_latency_ms"] <= solver.latency_limit
+        and r["metrics"]["cost_per_1k"] <= solver.cost_limit
     ]
-    frontier_runs = pareto_frontier(frontier_pool)
-    frontier_labels = set(r["label"] for r in frontier_runs)
+    if not valid_candidates:
+        valid_candidates = optimizer_evaluated
 
-    # ── 5. Summary Table ──────────────────────────────────────────────────────
+    # Multi-objective Pareto Frontier calculation via backend ParetoCalculator
+    frontier_candidates = ParetoCalculator.get_pareto_frontier(valid_candidates, OBJECTIVES)
+
+    # Select the optimal winner from the Pareto Frontier maximizing precision and recall
+    quality_score = lambda r: (r["metrics"]["context_precision"] * 0.6 + r["metrics"]["context_recall"] * 0.4)
+    opt_winner = max(frontier_candidates, key=quality_score)
+
+    opt_run = copy.deepcopy(opt_winner)
+    opt_run["label"] = "RAGOS-Optimized"
+    om = opt_run["metrics"]
+
+    print(f"  Optimizer Winner Config: {opt_run['config']['chunking']['chunk_size']} chunk, "
+          f"{opt_run['config']['retrieval']['strategy']}, top_k={opt_run['config']['retrieval']['top_k']}, "
+          f"reranker={opt_run['config'].get('reranker', {}).get('model_name')}")
+    print(f"    Prec={om['context_precision']:.4f}  Recall={om['context_recall']:.4f}  "
+          f"Faith={om['faithfulness']:.4f}  AnsRel={om['answer_relevancy']:.4f}  "
+          f"Lat={om['retrieval_latency_ms']:.1f}ms  Cost=${om['cost_per_1k']:.4f}/1k\n")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Phase 4: Full Pareto Frontier Validation Across All Strategies
+    # ──────────────────────────────────────────────────────────────────────────
+    comparison_runs = [def_run, best_rand_run, opt_run] + [
+        r for r in random_runs if r["label"] != best_rand_run["label"]
+    ]
+    global_frontier = ParetoCalculator.get_pareto_frontier(comparison_runs, OBJECTIVES)
+    frontier_labels = {r["label"] for r in global_frontier}
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Phase 5: Structured Reporting
+    # ──────────────────────────────────────────────────────────────────────────
     def delta(a: Dict, b: Dict, metric: str):
         va, vb = a["metrics"][metric], b["metrics"][metric]
         d = va - vb
         pct = d / (abs(vb) + 1e-9) * 100
         return round(d, 4), round(pct, 1)
 
-    hdr = (f"\n{'Strategy':<18} {'Prec':>6} {'Recall':>7} {'Faith':>7}"
-           f" {'AnsRel':>7} {'RougeL':>7} {'Lat(ms)':>8} {'Cost/1k':>9} {'Pareto':>7}")
+    hdr = (f"\n{'Pipeline Strategy':<22} {'Prec':>6} {'Recall':>7} {'Faith':>7} "
+           f"{'AnsRel':>7} {'RougeL':>7} {'Lat(ms)':>8} {'Cost/1k':>9} {'Pareto':>7}")
     sep = "=" * len(hdr)
     lines = [hdr, sep]
 
-    for run in [def_r, rand_mean_r, best_rand, opt_r]:
+    for run in [def_run, rand_mean_run, best_rand_run, opt_run]:
         mm = run["metrics"]
         pf = "YES" if run["label"] in frontier_labels else "NO"
+        cost_str = f"${mm['cost_per_1k']:.4f}"
         lines.append(
-            f"{run['label']:<18}"
-            f" {mm['context_precision']:>6.4f}"
-            f" {mm['context_recall']:>7.4f}"
-            f" {mm.get('faithfulness', 0.0):>7.4f}"
-            f" {mm.get('answer_relevancy', 0.0):>7.4f}"
-            f" {mm.get('rouge_l', 0.0):>7.4f}"
-            f" {mm['avg_latency_ms']:>8.1f}"
-            f" {'$' + str(mm['cost_per_1k']):>9}"
-            f" {pf:>7}"
+            f"{run['label']:<22} "
+            f"{mm['context_precision']:>6.4f} "
+            f"{mm['context_recall']:>7.4f} "
+            f"{mm['faithfulness']:>7.4f} "
+            f"{mm['answer_relevancy']:>7.4f} "
+            f"{mm.get('rouge_l', 0.0):>7.4f} "
+            f"{mm['retrieval_latency_ms']:>8.1f} "
+            f"{cost_str:>9} "
+            f"{pf:>7}"
         )
     lines.append(sep)
     lines.append("")
     lines.append("  Gains vs Default Baseline:")
-    for run in [best_rand, opt_r]:
+    for run in [best_rand_run, opt_run]:
         lines.append(f"  {run['label']}:")
-        for m in ["context_precision", "context_recall", "avg_latency_ms", "cost_per_1k"]:
-            d, pct = delta(run, def_r, m)
+        for m in ["context_precision", "context_recall", "faithfulness", "retrieval_latency_ms", "cost_per_1k"]:
+            d, pct = delta(run, def_run, m)
             direction = OBJECTIVES.get(m, "maximize")
             good = (d >= 0 and direction == "maximize") or (d <= 0 and direction == "minimize")
             arrow = "↑" if good else "↓"
             sign  = "+" if d >= 0 else ""
-            lines.append(f"    {m:<22}: {sign}{d:.4f}  ({sign}{pct:.1f}%) {arrow}")
+            lines.append(f"    {m:<24}: {sign}{d:.4f}  ({sign}{pct:.1f}%) {arrow}")
         lines.append("")
 
     table = "\n".join(lines)
     print(table)
 
-    # ── 6. Persist Results ────────────────────────────────────────────────────
-    out = {
-        "seed": SEED,
-        "dataset_size": len(qa_pairs),
-        "corpus_size": len(corpus),
-        "num_random_trials": NUM_RANDOM,
-        "default": def_r,
-        "random_mean": rand_mean_r,
-        "best_random": best_rand,
-        "ragos_optimized": opt_r,
-        "all_random_runs": rand_runs,
+    # ──────────────────────────────────────────────────────────────────────────
+    # Phase 6: Persist Artifacts
+    # ──────────────────────────────────────────────────────────────────────────
+    results_payload = {
+        "benchmark_scope": {
+            "latency_scope": "retrieval_stage_wall_clock_ms",
+            "cost_scope": "projected_prompt_tokens_at_0.150_per_1m",
+            "eval_pairs": len(qa_pairs),
+            "corpus_size": len(corpus),
+            "sla_constraints": SLA_CONSTRAINTS,
+            "seed": SEED,
+        },
+        "default_baseline": def_run,
+        "random_search_mean": rand_mean_run,
+        "random_search_best": best_rand_run,
+        "ragos_optimized": opt_run,
+        "all_random_trials": random_runs,
         "pareto_frontier_labels": list(frontier_labels),
         "objectives": OBJECTIVES,
-        "configs": {
-            "default": DEFAULT_CONFIG,
-            "ragos_optimal": RAGOS_OPTIMAL_CONFIG,
-        },
     }
-    rpath = os.path.join(RESULTS_DIR, "benchmark_results.json")
-    tpath = os.path.join(RESULTS_DIR, "summary_table.txt")
-    with open(rpath, "w") as f: json.dump(out, f, indent=2)
-    with open(tpath, "w") as f: f.write(table + "\n")
 
-    # ── 7. Verdict ────────────────────────────────────────────────────────────
-    print(f"{'='*76}")
-    print(" RAGOS OPTIMIZER VERDICT (Optimized vs Default Baseline)")
-    print(f"{'='*76}")
+    json_path = os.path.join(RESULTS_DIR, "benchmark_results.json")
+    txt_path  = os.path.join(RESULTS_DIR, "summary_table.txt")
+    with open(json_path, "w") as f:
+        json.dump(results_payload, f, indent=2)
+    with open(txt_path, "w") as f:
+        f.write(table + "\n")
+
+    print(f"{'='*80}")
+    print(" RAGOS VERDICT")
+    print(f"{'='*80}")
     for m, direction in OBJECTIVES.items():
-        d, pct = delta(opt_r, def_r, m)
-        good  = (d >= 0 and direction == "maximize") or (d <= 0 and direction == "minimize")
-        label = "BETTER ↑" if good else "WORSE  ↓"
-        sign  = "+" if d >= 0 else ""
-        print(f"  {m:<22}: {sign}{pct:+.1f}%  [{label}]")
-    print(f"  {'Pareto-frontier':<22}: {'YES (Non-dominated)' if 'RAGOS-Optimized' in frontier_labels else 'NO'}")
-    print(f"  {'Results persisted':<22}: {RESULTS_DIR}/")
-    print("=" * 76)
+        d, pct = delta(opt_run, def_run, m)
+        good = (d >= 0 and direction == "maximize") or (d <= 0 and direction == "minimize")
+        status = "BETTER ↑" if good else "WORSE  ↓"
+        sign = "+" if d >= 0 else ""
+        print(f"  {m:<24}: {sign}{pct:+.1f}%  [{status}]")
+    print(f"  {'Pareto Frontier Status':<24}: {'YES (Optimal non-dominated)' if 'RAGOS-Optimized' in frontier_labels else 'NO'}")
+    print(f"  {'Artifacts Saved':<24}: {RESULTS_DIR}")
+    print("=" * 80)
 
 if __name__ == "__main__":
     main()

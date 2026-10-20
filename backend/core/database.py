@@ -1,3 +1,11 @@
+import numpy as np
+if not hasattr(np, "float_"):
+    np.float_ = np.float64
+if not hasattr(np, "int_"):
+    np.int_ = np.int64
+if not hasattr(np, "uint"):
+    np.uint = np.uint64
+
 import chromadb
 from functools import lru_cache
 from .config import settings

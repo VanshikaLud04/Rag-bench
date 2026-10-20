@@ -104,3 +104,40 @@ def compute_answer_relevancy_rouge(answer: str, ground_truth: str) -> float:
     scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     scores = scorer.score(ground_truth, answer)
     return scores['rougeL'].fmeasure
+
+from ...core.interfaces import BaseEvaluator
+
+class ContextPrecision(BaseEvaluator):
+    async def compute(self, query: str, contexts: List[str], answer: str, **kwargs) -> float:
+        if not contexts:
+            return 0.0
+        answer_emb = await _encode(answer)
+        scores = []
+        for c in contexts:
+            c_text = c if isinstance(c, str) else getattr(c, "text", str(c))
+            chunk_emb = await _encode(c_text)
+            scores.append(float(util.cos_sim(chunk_emb, answer_emb)))
+        relevant = sum(1 for s in scores if s > 0.5)
+        return round(relevant / len(contexts), 4)
+
+class ContextRecall(BaseEvaluator):
+    async def compute(self, query: str, contexts: List[str], answer: str, **kwargs) -> float:
+        target = kwargs.get("ground_truth") or answer
+        if not contexts or not target:
+            return 0.0
+        target_emb = await _encode(target)
+        scores = []
+        for c in contexts:
+            c_text = c if isinstance(c, str) else getattr(c, "text", str(c))
+            chunk_emb = await _encode(c_text)
+            scores.append(float(util.cos_sim(chunk_emb, target_emb)))
+        return round(max(scores), 4) if scores else 0.0
+
+class Faithfulness(BaseEvaluator):
+    async def compute(self, query: str, contexts: List[str], answer: str, **kwargs) -> float:
+        context_texts = [c if isinstance(c, str) else getattr(c, "text", str(c)) for c in contexts]
+        return await compute_faithfulness(answer, context_texts)
+
+class AnswerRelevancy(BaseEvaluator):
+    async def compute(self, query: str, contexts: List[str], answer: str, **kwargs) -> float:
+        return await compute_answer_relevancy(query, answer)

@@ -1,6 +1,10 @@
 import logging
 from typing import List, Optional
-import openai
+
+try:
+    import openai
+except ImportError:
+    openai = None
 
 from ...core.config import settings
 from ...core.prompts import PromptManager

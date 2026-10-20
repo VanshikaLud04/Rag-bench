@@ -1,7 +1,29 @@
 from typing import List, Optional, Dict
 from dataclasses import dataclass
 import logging
-from rank_bm25 import BM25Okapi
+try:
+    from rank_bm25 import BM25Okapi
+except ImportError:
+    class BM25Okapi:
+        """Lightweight pure-python fallback when rank_bm25 is not installed."""
+        def __init__(self, corpus, k1=1.5, b=0.75):
+            self.corpus = corpus
+            self.doc_len = [len(doc) for doc in corpus]
+            self.avgdl = sum(self.doc_len) / len(self.doc_len) if self.doc_len else 1.0
+            self.k1 = k1
+            self.b = b
+            
+        def get_scores(self, query):
+            q_set = set(query)
+            scores = []
+            for doc, dl in zip(self.corpus, self.doc_len):
+                score = 0.0
+                for term in q_set:
+                    freq = doc.count(term)
+                    if freq > 0:
+                        score += (freq * (self.k1 + 1)) / (freq + self.k1 * (1 - self.b + self.b * (dl / self.avgdl)))
+                scores.append(score)
+            return scores
 from ...core.config import settings
 from .vector_store import VectorStore
 from ..ingestion.embedder import Embedder
