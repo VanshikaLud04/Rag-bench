@@ -50,7 +50,8 @@ DATA_PATH   = os.path.join(REPO_ROOT, "data", "qa_pairs.json")
 RESULTS_DIR = os.path.join(REPO_ROOT, "benchmark", "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-# Production SLA constraints: sub-20ms retrieval latency and <= $0.080 / 1k queries
+# Benchmark eligibility constraints (winner selection): latency <= 20ms and
+# <= $0.080 / 1k queries. These are benchmark thresholds, not production SLAs.
 SLA_CONSTRAINTS = ["latency <= 20ms", "cost <= 0.080"]
 
 NUM_CANDIDATES = 12
