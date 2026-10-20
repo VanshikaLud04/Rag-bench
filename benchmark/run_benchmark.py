@@ -4,7 +4,7 @@ RAGOS Empirical Benchmark: Baseline vs Random Search vs RAGOS Optimizer
 Empirically benchmarks RAG pipeline configurations on a controlled technical QA corpus:
   1. Default Baseline    – Standard unoptimized pipeline (chunk=512, dense, top_k=3, no-rerank)
   2. Random Search       – Unguided exploration across search dimensions (12 trials without constraint repair)
-  3. RAGOS Optimizer     – Constraint-guided search via RandomOptimizer + ConstraintSolver + ParetoCalculator
+  3. RAGOS Optimizer     – Constraint-screened search via RandomOptimizer + ConstraintSolver + ParetoCalculator
 
 Scope & Measurement Attribution:
 --------------------------------
@@ -14,8 +14,10 @@ Scope & Measurement Attribution:
   at standard input rates ($0.150 per 1M input tokens).
 - IR Precision@K: Fraction of retrieved chunks originating from the ground-truth source document.
 - Evidence Recall: Proportion of ground-truth content tokens retrieved in the context.
-- Groundedness / Faithfulness: Proportion of synthesized answer content grounded in retrieved chunks.
-- Answer Relevancy: Semantic cosine similarity between query and retrieved context.
+- Extractive Groundedness: Lexical overlap between an extractive diagnostic string and its source context.
+  It is not an LLM faithfulness metric.
+- Query-Context Similarity: Semantic cosine similarity between the query and the extractive context.
+  It is not a generated-answer relevancy metric.
 
 Outputs:
   benchmark/results/benchmark_results.json
@@ -51,15 +53,14 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # Production SLA constraints: sub-20ms retrieval latency and <= $0.080 / 1k queries
 SLA_CONSTRAINTS = ["latency <= 20ms", "cost <= 0.080"]
 
-NUM_RANDOM   = 12
+NUM_CANDIDATES = 12
 ALPHA_HYBRID = 0.6  # weight for dense component in hybrid retrieval
 
 # Optimization objectives for ParetoCalculator
 OBJECTIVES: Dict[str, str] = {
     "context_precision":    "maximize",
-    "context_recall":       "maximize",
-    "faithfulness":         "maximize",
-    "answer_relevancy":     "maximize",
+    "evidence_recall":      "maximize",
+    "query_context_similarity": "maximize",
     "retrieval_latency_ms": "minimize",
     "cost_per_1k":          "minimize",
 }
@@ -311,7 +312,7 @@ def evaluate_context_precision(retrieved: List[ChunkItem], target_doc_id: str) -
     hits = sum(1 for c in retrieved if c.doc_id == target_doc_id)
     return round(hits / len(retrieved), 4)
 
-def evaluate_context_recall(retrieved: List[ChunkItem], ground_truth: str) -> float:
+def evaluate_evidence_recall(retrieved: List[ChunkItem], ground_truth: str) -> float:
     """Evidence Recall: Fraction of key ground-truth content words captured in retrieved context."""
     gt_tokens = extract_content_tokens(ground_truth)
     if not gt_tokens:
@@ -320,8 +321,8 @@ def evaluate_context_recall(retrieved: List[ChunkItem], ground_truth: str) -> fl
     found = sum(1 for token in gt_tokens if token in retrieved_text)
     return round(found / len(gt_tokens), 4)
 
-def evaluate_faithfulness(answer: str, retrieved: List[ChunkItem]) -> float:
-    """Groundedness: Fraction of content words in answer directly verifiable from context."""
+def evaluate_extractive_groundedness(answer: str, retrieved: List[ChunkItem]) -> float:
+    """Diagnostic lexical overlap for an extractive answer, not LLM faithfulness."""
     ans_tokens = extract_content_tokens(answer)
     if not ans_tokens:
         return 1.0
@@ -329,8 +330,8 @@ def evaluate_faithfulness(answer: str, retrieved: List[ChunkItem]) -> float:
     grounded = sum(1 for token in ans_tokens if token in context_text)
     return round(grounded / len(ans_tokens), 4)
 
-def evaluate_answer_relevancy(query: str, answer: str, model: SentenceTransformer) -> float:
-    """Semantic cosine similarity between user query and synthesized answer context."""
+def evaluate_query_context_similarity(query: str, answer: str, model: SentenceTransformer) -> float:
+    """Semantic similarity between the query and extractive retrieved context."""
     if not answer.strip():
         return 0.0
     q_emb = model.encode(query, convert_to_tensor=False)
@@ -392,9 +393,9 @@ def run_pipeline(config_dict: Dict[str, Any],
             "query":                q,
             "target_doc_id":        target_doc_id,
             "context_precision":    evaluate_context_precision(final_chunks, target_doc_id),
-            "context_recall":       evaluate_context_recall(final_chunks, gt),
-            "faithfulness":         evaluate_faithfulness(answer, final_chunks),
-            "answer_relevancy":     evaluate_answer_relevancy(q, answer, model),
+            "evidence_recall":      evaluate_evidence_recall(final_chunks, gt),
+            "extractive_groundedness": evaluate_extractive_groundedness(answer, final_chunks),
+            "query_context_similarity": evaluate_query_context_similarity(q, answer, model),
             "rouge_l":              evaluate_rouge_l(answer, gt),
             "retrieval_latency_ms": retrieval_latency,
             "prompt_tokens":        prompt_tokens,
@@ -412,9 +413,9 @@ def run_pipeline(config_dict: Dict[str, Any],
         "per_query": rows,
         "metrics": {
             "context_precision":    agg("context_precision"),
-            "context_recall":       agg("context_recall"),
-            "faithfulness":         agg("faithfulness"),
-            "answer_relevancy":     agg("answer_relevancy"),
+            "evidence_recall":      agg("evidence_recall"),
+            "extractive_groundedness": agg("extractive_groundedness"),
+            "query_context_similarity": agg("query_context_similarity"),
             "rouge_l":              agg("rouge_l"),
             "retrieval_latency_ms": avg_latency,
             "avg_prompt_tokens":    avg_prompt_tokens,
@@ -446,28 +447,23 @@ def main():
     def_run = run_pipeline(DEFAULT_BASE_CONFIG, qa_pairs, corpus)
     def_run["label"] = "Default Baseline"
     dm = def_run["metrics"]
-    print(f"    Prec={dm['context_precision']:.4f}  Recall={dm['context_recall']:.4f}  "
-          f"Faith={dm['faithfulness']:.4f}  AnsRel={dm['answer_relevancy']:.4f}  "
+    print(f"    Prec={dm['context_precision']:.4f}  EvidenceRecall={dm['evidence_recall']:.4f}  "
+          f"Extractive={dm['extractive_groundedness']:.4f}  QueryCtx={dm['query_context_similarity']:.4f}  "
           f"Lat={dm['retrieval_latency_ms']:.1f}ms  Cost=${dm['cost_per_1k']:.4f}/1k\n")
 
     # ──────────────────────────────────────────────────────────────────────────
     # Phase 2: Unguided Random Search (Generated via RandomOptimizer with no constraints)
     # ──────────────────────────────────────────────────────────────────────────
-    print(f">>> [Phase 2/3] Evaluating Unguided Random Search ({NUM_RANDOM} trials) ...")
+    print(f">>> [Phase 2/3] Evaluating Unguided Random Search ({NUM_CANDIDATES} candidates) ...")
     optimizer = RandomOptimizer()
     
     # Generate unguided candidates (empty constraints)
-    unguided_candidates = optimizer.generate_candidates(DEFAULT_BASE_CONFIG, n=NUM_RANDOM, constraints=[])
+    unguided_candidates = optimizer.generate_candidates(DEFAULT_BASE_CONFIG, n=NUM_CANDIDATES, constraints=[])
     random_runs = []
     seen_configs = set()
 
     for trial, cand in enumerate(unguided_candidates):
-        cfg_key = (
-            cand["chunking"]["chunk_size"],
-            cand["retrieval"]["strategy"],
-            cand["retrieval"]["top_k"],
-            cand.get("reranker", {}).get("model_name"),
-        )
+        cfg_key = json.dumps(cand, sort_keys=True, separators=(",", ":"))
         if cfg_key in seen_configs:
             continue
         seen_configs.add(cfg_key)
@@ -480,7 +476,7 @@ def main():
         run_res = run_pipeline(cand, qa_pairs, corpus)
         run_res["label"] = f"Random-{trial+1}"
         rm = run_res["metrics"]
-        print(f"prec={rm['context_precision']:.4f}  recall={rm['context_recall']:.4f}  "
+        print(f"prec={rm['context_precision']:.4f}  evidence_recall={rm['evidence_recall']:.4f}  "
               f"lat={rm['retrieval_latency_ms']:>5.1f}ms  cost=${rm['cost_per_1k']:.4f}/1k")
         random_runs.append(run_res)
 
@@ -508,23 +504,18 @@ def main():
           f"cost=${brm['cost_per_1k']:.4f}/1k\n")
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Phase 3: RAGOS Optimizer (ConstraintSolver Repair + Pareto Pruning)
+    # Phase 3: RAGOS Optimizer (Measured Constraint Screening + Pareto Pruning)
     # ──────────────────────────────────────────────────────────────────────────
-    print(">>> [Phase 3/3] Executing RAGOS Optimizer (Constraint Repair & Pareto Pruning) ...")
+    print(">>> [Phase 3/3] Executing RAGOS Optimizer (Measured Constraint Screening & Pareto Pruning) ...")
     solver = ConstraintSolver(SLA_CONSTRAINTS)
 
-    # Generate constraint-guided candidates via RandomOptimizer
-    ragos_raw_candidates = optimizer.generate_candidates(DEFAULT_BASE_CONFIG, n=NUM_RANDOM * 2, constraints=SLA_CONSTRAINTS)
+    # Generate an equal-budget candidate set; enforce measured constraints below.
+    ragos_raw_candidates = optimizer.generate_candidates(DEFAULT_BASE_CONFIG, n=NUM_CANDIDATES, constraints=SLA_CONSTRAINTS)
     
     optimizer_evaluated = []
     seen_ragos = set()
     for cand in ragos_raw_candidates:
-        cfg_key = (
-            cand["chunking"]["chunk_size"],
-            cand["retrieval"]["strategy"],
-            cand["retrieval"]["top_k"],
-            cand.get("reranker", {}).get("model_name"),
-        )
+        cfg_key = json.dumps(cand, sort_keys=True, separators=(",", ":"))
         if cfg_key in seen_ragos:
             continue
         seen_ragos.add(cfg_key)
@@ -540,13 +531,15 @@ def main():
         and r["metrics"]["cost_per_1k"] <= solver.cost_limit
     ]
     if not valid_candidates:
-        valid_candidates = optimizer_evaluated
+        raise RuntimeError(
+            "No RAGOS candidate met the declared SLA; refusing to select an invalid configuration."
+        )
 
     # Multi-objective Pareto Frontier calculation via backend ParetoCalculator
     frontier_candidates = ParetoCalculator.get_pareto_frontier(valid_candidates, OBJECTIVES)
 
     # Select the optimal winner from the Pareto Frontier maximizing precision and recall
-    quality_score = lambda r: (r["metrics"]["context_precision"] * 0.6 + r["metrics"]["context_recall"] * 0.4)
+    quality_score = lambda r: (r["metrics"]["context_precision"] * 0.6 + r["metrics"]["evidence_recall"] * 0.4)
     opt_winner = max(frontier_candidates, key=quality_score)
 
     opt_run = copy.deepcopy(opt_winner)
@@ -556,8 +549,8 @@ def main():
     print(f"  Optimizer Winner Config: {opt_run['config']['chunking']['chunk_size']} chunk, "
           f"{opt_run['config']['retrieval']['strategy']}, top_k={opt_run['config']['retrieval']['top_k']}, "
           f"reranker={opt_run['config'].get('reranker', {}).get('model_name')}")
-    print(f"    Prec={om['context_precision']:.4f}  Recall={om['context_recall']:.4f}  "
-          f"Faith={om['faithfulness']:.4f}  AnsRel={om['answer_relevancy']:.4f}  "
+    print(f"    Prec={om['context_precision']:.4f}  EvidenceRecall={om['evidence_recall']:.4f}  "
+          f"Extractive={om['extractive_groundedness']:.4f}  QueryCtx={om['query_context_similarity']:.4f}  "
           f"Lat={om['retrieval_latency_ms']:.1f}ms  Cost=${om['cost_per_1k']:.4f}/1k\n")
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -578,8 +571,8 @@ def main():
         pct = d / (abs(vb) + 1e-9) * 100
         return round(d, 4), round(pct, 1)
 
-    hdr = (f"\n{'Pipeline Strategy':<22} {'Prec':>6} {'Recall':>7} {'Faith':>7} "
-           f"{'AnsRel':>7} {'RougeL':>7} {'Lat(ms)':>8} {'Cost/1k':>9} {'Pareto':>7}")
+    hdr = (f"\n{'Pipeline Strategy':<22} {'Prec':>6} {'EvRecall':>8} {'Extract':>7} "
+           f"{'QryCtx':>7} {'RougeL':>7} {'Lat(ms)':>8} {'Cost/1k':>9} {'Pareto':>7}")
     sep = "=" * len(hdr)
     lines = [hdr, sep]
 
@@ -590,9 +583,9 @@ def main():
         lines.append(
             f"{run['label']:<22} "
             f"{mm['context_precision']:>6.4f} "
-            f"{mm['context_recall']:>7.4f} "
-            f"{mm['faithfulness']:>7.4f} "
-            f"{mm['answer_relevancy']:>7.4f} "
+            f"{mm['evidence_recall']:>8.4f} "
+            f"{mm['extractive_groundedness']:>7.4f} "
+            f"{mm['query_context_similarity']:>7.4f} "
             f"{mm.get('rouge_l', 0.0):>7.4f} "
             f"{mm['retrieval_latency_ms']:>8.1f} "
             f"{cost_str:>9} "
@@ -603,7 +596,7 @@ def main():
     lines.append("  Gains vs Default Baseline:")
     for run in [best_rand_run, opt_run]:
         lines.append(f"  {run['label']}:")
-        for m in ["context_precision", "context_recall", "faithfulness", "retrieval_latency_ms", "cost_per_1k"]:
+        for m in ["context_precision", "evidence_recall", "retrieval_latency_ms", "cost_per_1k"]:
             d, pct = delta(run, def_run, m)
             direction = OBJECTIVES.get(m, "maximize")
             good = (d >= 0 and direction == "maximize") or (d <= 0 and direction == "minimize")
@@ -626,6 +619,12 @@ def main():
             "corpus_size": len(corpus),
             "sla_constraints": SLA_CONSTRAINTS,
             "seed": SEED,
+            "candidate_budget_per_strategy": NUM_CANDIDATES,
+            "metric_notes": {
+                "extractive_groundedness": "Lexical overlap diagnostic for extractive text; not LLM faithfulness.",
+                "query_context_similarity": "Query-to-extractive-context cosine similarity; not generated-answer relevancy.",
+                "sparse_retrieval": "Jaccard token-overlap scorer; not BM25.",
+            },
         },
         "default_baseline": def_run,
         "random_search_mean": rand_mean_run,

@@ -1,5 +1,4 @@
 from typing import Dict, Any, List
-from ..experiments.schema import ExperimentConfig
 
 class ConstraintSolver:
     def __init__(self, constraints: List[str]):
@@ -34,15 +33,10 @@ class ConstraintSolver:
                 # Swap to a local model
                 config_dict["generation"]["model_name"] = "phi3"
                 
-        # 2. Latency constraint repair
-        # If latency target is extremely tight (< 200ms), forcefully disable reranker 
-        # and shrink top_k to minimize processing time.
-        if self.latency_limit < 200:
-            if config_dict.get("reranker", {}).get("model_name") is not None:
-                config_dict["reranker"]["model_name"] = None
-            if config_dict.get("retrieval", {}).get("top_k", 5) > 3:
-                config_dict["retrieval"]["top_k"] = 3
-                
+        # 2. Latency constraints cannot be repaired reliably from configuration
+        # alone.  Actual retrieval latency is measured by the runner, which then
+        # filters candidates against ``latency_limit``.
+
         # 3. Cost constraint repair
         # If budget is strictly 0, force local models
         if self.cost_limit <= 0.0:

@@ -20,39 +20,25 @@ Instead of guessing whether to add a Cross-Encoder, adopt Hybrid Search, or expa
 
 ## 2. Empirical Benchmark: Baseline vs Random Search vs RAGOS Optimizer
 
-> **The Empirical Result**: Proving optimization, not just experimentation. RAGOS constraint-guided search and Pareto pruning isolate configurations that dominate naive defaults and unguided random search across retrieval precision, latency, and token cost simultaneously.
+> **Benchmark status**: this is a small, single-seed retrieval experiment. It is useful for comparing configurations on the included corpus; it is not an end-to-end generation evaluation or a production-latency guarantee.
 
 ### 📌 Scope & Measurement Attribution
 - **Retrieval-Stage Latency**: Wall-clock execution time for dense vector search, sparse inverted indexing, hybrid fusion, and CrossEncoder reranking. *(Generation-stage latency is excluded as it depends on external LLM provider infrastructure).*
 - **Token Footprint & Cost**: Evaluates prompt tokens consumed by retrieved context chunks, with projected input cost modeled at standard provider rates ($0.150 per 1M input tokens).
-- **Evaluation Corpus**: 20 technical QA pairs evaluated against realistic multi-paragraph documentation passages (~600–800 chars each) alongside 10 technical distractor documents.
+- **Evaluation Corpus**: 20 synthetic technical QA pairs evaluated against multi-paragraph passages alongside 10 technical distractor documents.
 - **Production SLA Constraints**: `latency <= 20ms`, `cost <= $0.080 / 1k queries`.
+- **Search Budget**: both unguided search and constraint-screened RAGOS evaluate 12 unique candidate configurations. A candidate must meet the measured SLA to be eligible; the benchmark never substitutes an invalid fallback.
+- **Metric scope**: `Evidence Recall` is lexical coverage of reference content words. `Extractive Groundedness` is a lexical-overlap diagnostic and is not LLM faithfulness. `Query–Context Similarity` is query-to-extractive-context similarity and is not generated-answer relevancy. The sparse path uses Jaccard token overlap, not BM25.
 
 ### 📊 Reproducible Head-to-Head Comparison
 
-```
-Pipeline Strategy        Prec  Recall   Faith  AnsRel  RougeL  Lat(ms)   Cost/1k  Pareto
-=========================================================================================
-Default Baseline       0.3500  1.0000  1.0000  0.6617  0.6319     14.3   $0.0479      NO
-Random Search (Mean)   0.3558  1.0000  1.0000  0.7551  0.6231     20.6   $0.0649      NO
-Random Search (Best)   0.3333  1.0000  1.0000  0.6617  0.6319     42.3   $0.0562      NO
-RAGOS-Optimized        0.6334  1.0000  1.0000  0.8486  0.6317      7.4   $0.0279     YES
-=========================================================================================
-```
-
-| Pipeline Strategy | Context Precision | Context Recall | Faithfulness | Ans Relevancy | Retrieval Latency (ms) | Projected Cost ($ / 1k Qs) | Pareto Frontier |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Default Baseline** (`chunk=512, dense, k=3, no-rerank`) | 0.3500 | 1.0000 | 1.0000 | 0.6617 | 14.3 ms | $0.0479 | NO (Dominated) |
-| **Random Search (Mean)** (12 unguided trials) | 0.3558 | 1.0000 | 1.0000 | 0.7551 | 20.6 ms | $0.0649 | NO (Dominated) |
-| **Random Search (Best)** (`chunk=1024, dense, k=3, cross-encoder`) | 0.3333 | 1.0000 | 1.0000 | 0.6617 | 42.3 ms *(+195.8%)* | $0.0562 *(+17.3%)* | NO (Dominated) |
-| **RAGOS-Optimized** (`chunk=256, dense, k=3, no-rerank`) | **0.6334 *(+81.0%)*** | **1.0000** | **1.0000** | **0.8486 *(+28.2%)*** | **7.4 ms *(-48.3%)*** | **$0.0279 *(-41.8%)*** | **YES (Optimal)** |
+Run the command below to generate machine-specific results. Retrieval latency depends on installed model versions and hardware, so checked-in aggregate numbers are not treated as portable performance claims.
 
 ### 🔍 Key Engineering Findings
 
-1. **Integrated Optimizer Engine**: The benchmark directly imports and exercises `backend.services.optimization.optimizer.RandomOptimizer`, `backend.services.optimization.constraints.ConstraintSolver`, and `backend.services.optimization.pareto.ParetoCalculator`. When the production SLA requires sub-20ms retrieval, `ConstraintSolver` proactively repairs candidate mutations by disabling cross-encoder rerankers and clamping `top_k <= 3` before execution.
-2. **The "Single-Metric Random Search" Trap**: In unguided search, optimizing solely for text overlap (ROUGE-L) selected a cross-encoder reranker pipeline (`Random Search Best`). While it retained 100% recall, its latency exploded to **42.3 ms (+195.8% slowdown)** and cost rose to **$0.0562 / 1k queries**, violently breaching the 20ms SLA. RAGOS's constraint repair and Pareto non-dominance pruning automatically discarded this dominated configuration.
-3. **IR Precision Boost (+81.0%) with Latency Halved (-48.3%)**: Default 512-character chunking increases embedding array sizes and retrieves peripheral non-relevant passages. Right-sizing chunk boundaries to 256 characters with top-3 density reduced retrieval latency from **14.3 ms down to 7.4 ms**, while boosting Information Retrieval Context Precision from **0.3500 to 0.6334 (+81.0%)**.
-4. **41.8% Prompt Token & Cost Savings**: Compact, information-dense chunks eliminate peripheral fluff, shrinking the retrieved prompt token footprint and cutting projected input cost from **$0.0479 to $0.0279 per 1,000 queries** while retaining 100% ground-truth content recall.
+1. **Integrated optimizer engine**: the benchmark exercises `RandomOptimizer`, `ConstraintSolver`, and `ParetoCalculator` directly.
+2. **Measured constraints**: latency constraints are screened after execution, rather than assumed from a configuration heuristic.
+3. **Pareto results are dataset-specific**: non-dominated configurations expose trade-offs; the benchmark does not claim that one strategy universally dominates every random trial.
 
 
 ### 🧪 1-Command Reproduction

@@ -1,4 +1,5 @@
 import copy
+import json
 from typing import List, Dict, Any
 from ...core.interfaces import BaseOptimizer
 from .dimensions import get_default_dimensions
@@ -12,7 +13,13 @@ class RandomOptimizer(BaseOptimizer):
         solver = ConstraintSolver(constraints)
         candidates = []
         
-        for _ in range(n):
+        seen = set()
+        # The configured dimensions have a finite search space.  Bound retries
+        # so callers get unique configurations without risking an infinite loop.
+        max_attempts = max(n * 20, 100)
+        attempts = 0
+        while len(candidates) < n and attempts < max_attempts:
+            attempts += 1
             # Sample dimensions
             candidate = copy.deepcopy(base_config)
             
@@ -26,9 +33,10 @@ class RandomOptimizer(BaseOptimizer):
             
             # Repair using constraint solver
             candidate = solver.repair(candidate)
-            
-            # We could do deduplication here to avoid running the exact same config twice,
-            # but for random search MVP we just append.
+            key = json.dumps(candidate, sort_keys=True, separators=(",", ":"))
+            if key in seen:
+                continue
+            seen.add(key)
             candidates.append(candidate)
             
         return candidates
