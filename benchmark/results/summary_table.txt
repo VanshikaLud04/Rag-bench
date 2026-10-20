@@ -1,0 +1,22 @@
+
+Pipeline Strategy        Prec EvRecall Extract  QryCtx  RougeL  Lat(ms)   Cost/1k   SLA  Pareto
+================================================================================================
+Default Baseline       0.3500   1.0000  0.9847  0.6617  0.6319     18.4   $0.0479   YES      NO
+Random Search (Mean)   0.3560   1.0000  0.9844  0.7551  0.6246     26.1   $0.0622     -      NO
+Random Search (Best)   0.6333   1.0000  0.9848  0.6793  0.6239      8.0   $0.0268   YES     YES
+RAGOS-Optimized        0.3800   1.0000  0.9831  0.8486  0.6317      7.9   $0.0415   YES      NO
+================================================================================================
+
+  Gains vs Default Baseline:
+  Random Search (Best):
+    context_precision       : +0.2833  (+80.9%) ↑
+    evidence_recall         : +0.0000  (+0.0%) ↑
+    retrieval_latency_ms    : -10.4700  (-56.8%) ↑
+    cost_per_1k             : -0.0211  (-44.1%) ↑
+
+  RAGOS-Optimized:
+    context_precision       : +0.0300  (+8.6%) ↑
+    evidence_recall         : +0.0000  (+0.0%) ↑
+    retrieval_latency_ms    : -10.5000  (-57.0%) ↑
+    cost_per_1k             : -0.0064  (-13.4%) ↑
+

@@ -11,8 +11,16 @@ class ParetoCalculator:
         at_least_one_better = False
         
         for metric, direction in objectives.items():
-            val_a = run_a.get(metric, 0.0)
-            val_b = run_b.get(metric, 0.0)
+            # Missing metrics must fail loudly. Defaulting them to 0.0 silently
+            # distorts dominance: a missing 'minimize' metric looks perfect and
+            # a missing 'maximize' metric looks dominated.
+            if metric not in run_a or metric not in run_b:
+                raise ValueError(
+                    f"Pareto comparison requires metric {metric!r} on every run; "
+                    "missing metrics are not defaulted."
+                )
+            val_a = run_a[metric]
+            val_b = run_b[metric]
             
             if direction == "maximize":
                 if val_a < val_b:
@@ -35,6 +43,15 @@ class ParetoCalculator:
         """
         if not runs:
             return []
+            
+        for run in runs:
+            metrics = run.get("metrics", {})
+            missing = [m for m in objectives if m not in metrics]
+            if missing:
+                raise ValueError(
+                    f"Run {run.get('label', '<unlabeled>')!r} is missing objective "
+                    f"metrics: {missing}"
+                )
             
         frontier = []
         

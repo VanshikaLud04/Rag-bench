@@ -313,21 +313,27 @@ def evaluate_context_precision(retrieved: List[ChunkItem], target_doc_id: str) -
     return round(hits / len(retrieved), 4)
 
 def evaluate_evidence_recall(retrieved: List[ChunkItem], ground_truth: str) -> float:
-    """Evidence Recall: Fraction of key ground-truth content words captured in retrieved context."""
+    """Evidence Recall: Fraction of key ground-truth content words present as
+    whole tokens in the retrieved context (exact-token match, no substrings)."""
     gt_tokens = extract_content_tokens(ground_truth)
     if not gt_tokens:
         return 1.0
-    retrieved_text = " ".join(c.text for c in retrieved).lower()
-    found = sum(1 for token in gt_tokens if token in retrieved_text)
+    retrieved_tokens: Set[str] = set()
+    for c in retrieved:
+        retrieved_tokens |= extract_content_tokens(c.text)
+    found = sum(1 for token in gt_tokens if token in retrieved_tokens)
     return round(found / len(gt_tokens), 4)
 
 def evaluate_extractive_groundedness(answer: str, retrieved: List[ChunkItem]) -> float:
-    """Diagnostic lexical overlap for an extractive answer, not LLM faithfulness."""
+    """Diagnostic lexical overlap for an extractive answer, not LLM faithfulness.
+    Uses whole-token matching against the retrieved context (no substrings)."""
     ans_tokens = extract_content_tokens(answer)
     if not ans_tokens:
         return 1.0
-    context_text = " ".join(c.text for c in retrieved).lower()
-    grounded = sum(1 for token in ans_tokens if token in context_text)
+    retrieved_tokens: Set[str] = set()
+    for c in retrieved:
+        retrieved_tokens |= extract_content_tokens(c.text)
+    grounded = sum(1 for token in ans_tokens if token in retrieved_tokens)
     return round(grounded / len(ans_tokens), 4)
 
 def evaluate_query_context_similarity(query: str, answer: str, model: SentenceTransformer) -> float:
@@ -341,6 +347,50 @@ def evaluate_query_context_similarity(query: str, answer: str, model: SentenceTr
 
 def evaluate_rouge_l(answer: str, ground_truth: str) -> float:
     return round(_rouge_scorer.score(ground_truth, answer)["rougeL"].fmeasure, 4)
+
+# ── Experiment Identity & Shared Selection ───────────────────────────────────
+def experiment_key(config: Dict[str, Any]) -> str:
+    """Dedup fingerprint over the dimensions this benchmark actually exercises.
+
+    `generation` is excluded: the benchmark synthesizes extractive answers and
+    never invokes an LLM generator, so candidates differing only by generation
+    model are the same experiment and must not consume extra evaluation budget
+    or inflate the unique-experiment count.
+    """
+    effective = {k: v for k, v in config.items() if k != "generation"}
+    return json.dumps(effective, sort_keys=True, separators=(",", ":"))
+
+# Shared, pre-declared winner-selection criterion. Both the random-search
+# winner and the RAGOS winner are chosen with this score so the two strategies
+# are compared on identical terms. ROUGE-L is reported but not used to select.
+SELECTION_WEIGHTS: Dict[str, float] = {
+    "context_precision": 0.6,
+    "evidence_recall":   0.4,
+}
+
+def selection_score(run: Dict[str, Any]) -> float:
+    """Shared winner-selection score: weighted precision + evidence recall."""
+    return sum(run["metrics"][m] * w for m, w in SELECTION_WEIGHTS.items())
+
+def meets_sla(run: Dict[str, Any], latency_limit_ms: float, cost_limit_1k: float) -> bool:
+    m = run["metrics"]
+    return m["retrieval_latency_ms"] <= latency_limit_ms and m["cost_per_1k"] <= cost_limit_1k
+
+def aggregate_mean_metrics(runs: List[Dict[str, Any]]) -> Dict[str, float]:
+    """Mean of EVERY metric key present on the runs.
+
+    Aggregating a hand-picked subset previously omitted `extractive_groundedness`,
+    which the summary table reads from every row, so fresh benchmark runs
+    crashed with a KeyError.
+    """
+    if not runs:
+        raise ValueError("Cannot aggregate an empty run list.")
+    keys = sorted({k for r in runs for k in r["metrics"]})
+    return {
+        m: round(sum(r["metrics"][m] for r in runs) / len(runs),
+                 1 if m == "avg_prompt_tokens" else 4)
+        for m in keys
+    }
 
 # ── Pipeline Runner ───────────────────────────────────────────────────────────
 def run_pipeline(config_dict: Dict[str, Any],
@@ -440,12 +490,17 @@ def main():
 
     warmup_models()
 
+    # Shared feasibility thresholds — applied identically to the random-search
+    # winner and the RAGOS winner so both strategies face the same SLA bar.
+    solver = ConstraintSolver(SLA_CONSTRAINTS)
+
     # ──────────────────────────────────────────────────────────────────────────
     # Phase 1: Default Baseline Configuration
     # ──────────────────────────────────────────────────────────────────────────
     print(">>> [Phase 1/3] Evaluating Default Baseline (chunk=512, dense, k=3, no-rerank) ...")
     def_run = run_pipeline(DEFAULT_BASE_CONFIG, qa_pairs, corpus)
     def_run["label"] = "Default Baseline"
+    def_run["meets_sla"] = meets_sla(def_run, solver.latency_limit, solver.cost_limit)
     dm = def_run["metrics"]
     print(f"    Prec={dm['context_precision']:.4f}  EvidenceRecall={dm['evidence_recall']:.4f}  "
           f"Extractive={dm['extractive_groundedness']:.4f}  QueryCtx={dm['query_context_similarity']:.4f}  "
@@ -463,7 +518,7 @@ def main():
     seen_configs = set()
 
     for trial, cand in enumerate(unguided_candidates):
-        cfg_key = json.dumps(cand, sort_keys=True, separators=(",", ":"))
+        cfg_key = experiment_key(cand)
         if cfg_key in seen_configs:
             continue
         seen_configs.add(cfg_key)
@@ -480,12 +535,12 @@ def main():
               f"lat={rm['retrieval_latency_ms']:>5.1f}ms  cost=${rm['cost_per_1k']:.4f}/1k")
         random_runs.append(run_res)
 
-    # Compute comprehensive Random Search Mean across all evaluated metrics
-    rand_mean_metrics = {}
-    for m in OBJECTIVES:
-        rand_mean_metrics[m] = round(sum(r["metrics"][m] for r in random_runs) / len(random_runs), 4)
-    rand_mean_metrics["rouge_l"] = round(sum(r["metrics"]["rouge_l"] for r in random_runs) / len(random_runs), 4)
-    rand_mean_metrics["avg_prompt_tokens"] = round(sum(r["metrics"]["avg_prompt_tokens"] for r in random_runs) / len(random_runs), 1)
+    # Compute the Random-Search mean over the FULL per-run metric set.
+    # Aggregating a hand-picked subset previously omitted `extractive_groundedness`,
+    # which the summary table then read from every row — crashing fresh runs.
+    if not random_runs:
+        raise RuntimeError("Unguided random search produced no evaluable trials.")
+    rand_mean_metrics = aggregate_mean_metrics(random_runs)
 
     rand_mean_run = {
         "label": "Random Search (Mean)",
@@ -493,12 +548,22 @@ def main():
         "metrics": rand_mean_metrics,
     }
 
-    # Best Random Trial selected purely by single-metric text overlap (ROUGE-L)
-    best_rand_run = max(random_runs, key=lambda r: r["metrics"]["rouge_l"])
+    # Best Random Trial selected with the SAME shared selection score and SLA
+    # feasibility thresholds used for the RAGOS winner (previously this used
+    # ROUGE-L alone, which made the random-vs-RAGOS comparison unfair).
+    feasible_random = [r for r in random_runs if meets_sla(r, solver.latency_limit, solver.cost_limit)]
+    if feasible_random:
+        best_rand_run = max(feasible_random, key=selection_score)
+        sla_note = "SLA-feasible"
+    else:
+        best_rand_run = max(random_runs, key=selection_score)
+        sla_note = "no SLA-feasible random trial; best infeasible trial shown"
     best_rand_run = copy.deepcopy(best_rand_run)
     best_rand_run["label"] = "Random Search (Best)"
+    best_rand_run["meets_sla"] = meets_sla(best_rand_run, solver.latency_limit, solver.cost_limit)
     brm = best_rand_run["metrics"]
-    print(f"\n  Best Random Trial by ROUGE ({best_rand_run['config']['retrieval']['strategy']}, "
+    print(f"\n  Best Random Trial by shared selection score ({sla_note}; "
+          f"{best_rand_run['config']['retrieval']['strategy']}, "
           f"rerank={bool(best_rand_run['config'].get('reranker', {}).get('model_name'))}): "
           f"prec={brm['context_precision']:.4f}  lat={brm['retrieval_latency_ms']:.1f}ms  "
           f"cost=${brm['cost_per_1k']:.4f}/1k\n")
@@ -507,7 +572,6 @@ def main():
     # Phase 3: RAGOS Optimizer (Measured Constraint Screening + Pareto Pruning)
     # ──────────────────────────────────────────────────────────────────────────
     print(">>> [Phase 3/3] Executing RAGOS Optimizer (Measured Constraint Screening & Pareto Pruning) ...")
-    solver = ConstraintSolver(SLA_CONSTRAINTS)
 
     # Generate an equal-budget candidate set; enforce measured constraints below.
     ragos_raw_candidates = optimizer.generate_candidates(DEFAULT_BASE_CONFIG, n=NUM_CANDIDATES, constraints=SLA_CONSTRAINTS)
@@ -515,7 +579,7 @@ def main():
     optimizer_evaluated = []
     seen_ragos = set()
     for cand in ragos_raw_candidates:
-        cfg_key = json.dumps(cand, sort_keys=True, separators=(",", ":"))
+        cfg_key = experiment_key(cand)
         if cfg_key in seen_ragos:
             continue
         seen_ragos.add(cfg_key)
@@ -525,11 +589,7 @@ def main():
         optimizer_evaluated.append(res)
 
     # Filter to candidates that satisfy SLA constraints
-    valid_candidates = [
-        r for r in optimizer_evaluated
-        if r["metrics"]["retrieval_latency_ms"] <= solver.latency_limit
-        and r["metrics"]["cost_per_1k"] <= solver.cost_limit
-    ]
+    valid_candidates = [r for r in optimizer_evaluated if meets_sla(r, solver.latency_limit, solver.cost_limit)]
     if not valid_candidates:
         raise RuntimeError(
             "No RAGOS candidate met the declared SLA; refusing to select an invalid configuration."
@@ -538,12 +598,13 @@ def main():
     # Multi-objective Pareto Frontier calculation via backend ParetoCalculator
     frontier_candidates = ParetoCalculator.get_pareto_frontier(valid_candidates, OBJECTIVES)
 
-    # Select the optimal winner from the Pareto Frontier maximizing precision and recall
-    quality_score = lambda r: (r["metrics"]["context_precision"] * 0.6 + r["metrics"]["evidence_recall"] * 0.4)
-    opt_winner = max(frontier_candidates, key=quality_score)
+    # Select the winner from the Pareto Frontier with the SAME shared
+    # selection score and feasibility thresholds used for random search.
+    opt_winner = max(frontier_candidates, key=selection_score)
 
     opt_run = copy.deepcopy(opt_winner)
     opt_run["label"] = "RAGOS-Optimized"
+    opt_run["meets_sla"] = True
     om = opt_run["metrics"]
 
     print(f"  Optimizer Winner Config: {opt_run['config']['chunking']['chunk_size']} chunk, "
@@ -572,7 +633,7 @@ def main():
         return round(d, 4), round(pct, 1)
 
     hdr = (f"\n{'Pipeline Strategy':<22} {'Prec':>6} {'EvRecall':>8} {'Extract':>7} "
-           f"{'QryCtx':>7} {'RougeL':>7} {'Lat(ms)':>8} {'Cost/1k':>9} {'Pareto':>7}")
+           f"{'QryCtx':>7} {'RougeL':>7} {'Lat(ms)':>8} {'Cost/1k':>9} {'SLA':>5} {'Pareto':>7}")
     sep = "=" * len(hdr)
     lines = [hdr, sep]
 
@@ -580,6 +641,10 @@ def main():
         mm = run["metrics"]
         pf = "YES" if run["label"] in frontier_labels else "NO"
         cost_str = f"${mm['cost_per_1k']:.4f}"
+        if run["label"] == "Random Search (Mean)":
+            sla_str = "-"  # mean row aggregates configs; not a real pipeline
+        else:
+            sla_str = "YES" if meets_sla(run, solver.latency_limit, solver.cost_limit) else "NO"
         lines.append(
             f"{run['label']:<22} "
             f"{mm['context_precision']:>6.4f} "
@@ -589,6 +654,7 @@ def main():
             f"{mm.get('rouge_l', 0.0):>7.4f} "
             f"{mm['retrieval_latency_ms']:>8.1f} "
             f"{cost_str:>9} "
+            f"{sla_str:>5} "
             f"{pf:>7}"
         )
     lines.append(sep)
@@ -624,7 +690,14 @@ def main():
                 "extractive_groundedness": "Lexical overlap diagnostic for extractive text; not LLM faithfulness.",
                 "query_context_similarity": "Query-to-extractive-context cosine similarity; not generated-answer relevancy.",
                 "sparse_retrieval": "Jaccard token-overlap scorer; not BM25.",
+                "evidence_recall": "Whole-token content-word coverage; exact-token matching, no substrings.",
             },
+            "selection": {
+                "score": SELECTION_WEIGHTS,
+                "feasibility": SLA_CONSTRAINTS,
+                "applies_to": ["Random Search (Best)", "RAGOS-Optimized"],
+            },
+            "dedup_key": "experiment_key: config minus generation dimension (the generator is never invoked by this benchmark)",
         },
         "default_baseline": def_run,
         "random_search_mean": rand_mean_run,

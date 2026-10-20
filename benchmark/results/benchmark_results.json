@@ -1,0 +1,4196 @@
+{
+  "benchmark_scope": {
+    "latency_scope": "retrieval_stage_wall_clock_ms",
+    "cost_scope": "projected_prompt_tokens_at_0.150_per_1m",
+    "eval_pairs": 20,
+    "corpus_size": 30,
+    "sla_constraints": [
+      "latency <= 20ms",
+      "cost <= 0.080"
+    ],
+    "seed": 42,
+    "candidate_budget_per_strategy": 12,
+    "metric_notes": {
+      "extractive_groundedness": "Lexical overlap diagnostic for extractive text; not LLM faithfulness.",
+      "query_context_similarity": "Query-to-extractive-context cosine similarity; not generated-answer relevancy.",
+      "sparse_retrieval": "Jaccard token-overlap scorer; not BM25.",
+      "evidence_recall": "Whole-token content-word coverage; exact-token matching, no substrings."
+    },
+    "selection": {
+      "score": {
+        "context_precision": 0.6,
+        "evidence_recall": 0.4
+      },
+      "feasibility": [
+        "latency <= 20ms",
+        "cost <= 0.080"
+      ],
+      "applies_to": [
+        "Random Search (Best)",
+        "RAGOS-Optimized"
+      ]
+    },
+    "dedup_key": "experiment_key: config minus generation dimension (the generator is never invoked by this benchmark)"
+  },
+  "default_baseline": {
+    "config": {
+      "chunking": {
+        "chunk_size": 512,
+        "overlap": 32,
+        "strategy": "fixed"
+      },
+      "retrieval": {
+        "strategy": "dense",
+        "top_k": 3
+      },
+      "embedding": {
+        "model_name": "all-MiniLM-L6-v2"
+      },
+      "reranker": {
+        "model_name": null
+      },
+      "generation": {
+        "model_name": "phi3"
+      }
+    },
+    "per_query": [
+      {
+        "query": "What is the capital of France?",
+        "target_doc_id": "topic_0",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9722,
+        "query_context_similarity": 0.6826,
+        "rouge_l": 0.1613,
+        "retrieval_latency_ms": 40.60266702435911,
+        "prompt_tokens": 274,
+        "cost_usd": 4.1099999999999996e-05
+      },
+      {
+        "query": "Explain quantum computing briefly.",
+        "target_doc_id": "topic_1",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9688,
+        "query_context_similarity": 0.7279,
+        "rouge_l": 0.5714,
+        "retrieval_latency_ms": 32.800500048324466,
+        "prompt_tokens": 211,
+        "cost_usd": 3.165e-05
+      },
+      {
+        "query": "Who wrote Hamlet?",
+        "target_doc_id": "topic_2",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.6298,
+        "rouge_l": 0.1846,
+        "retrieval_latency_ms": 8.371624862775207,
+        "prompt_tokens": 146,
+        "cost_usd": 2.19e-05
+      },
+      {
+        "query": "What is Retrieval-Augmented Generation (RAG)?",
+        "target_doc_id": "topic_3",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.69,
+        "rouge_l": 0.716,
+        "retrieval_latency_ms": 23.467249935492873,
+        "prompt_tokens": 374,
+        "cost_usd": 5.6099999999999995e-05
+      },
+      {
+        "query": "What are dense embeddings?",
+        "target_doc_id": "topic_4",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9688,
+        "query_context_similarity": 0.6838,
+        "rouge_l": 0.597,
+        "retrieval_latency_ms": 33.69191684760153,
+        "prompt_tokens": 372,
+        "cost_usd": 5.5799999999999994e-05
+      },
+      {
+        "query": "What does BM25 stand for?",
+        "target_doc_id": "topic_5",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.6306,
+        "rouge_l": 0.6905,
+        "retrieval_latency_ms": 6.629458861425519,
+        "prompt_tokens": 362,
+        "cost_usd": 5.43e-05
+      },
+      {
+        "query": "What is Hybrid Search?",
+        "target_doc_id": "topic_6",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.5986,
+        "rouge_l": 0.7692,
+        "retrieval_latency_ms": 8.841542061418295,
+        "prompt_tokens": 254,
+        "cost_usd": 3.81e-05
+      },
+      {
+        "query": "What is LLM-as-a-judge?",
+        "target_doc_id": "topic_7",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9714,
+        "query_context_similarity": 0.7403,
+        "rouge_l": 0.6829,
+        "retrieval_latency_ms": 25.263374904170632,
+        "prompt_tokens": 374,
+        "cost_usd": 5.6099999999999995e-05
+      },
+      {
+        "query": "Explain what 'hallucination' means in the context of LLMs.",
+        "target_doc_id": "topic_8",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.973,
+        "query_context_similarity": 0.6985,
+        "rouge_l": 0.6567,
+        "retrieval_latency_ms": 27.073292061686516,
+        "prompt_tokens": 383,
+        "cost_usd": 5.745e-05
+      },
+      {
+        "query": "What is cosine similarity?",
+        "target_doc_id": "topic_9",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.7648,
+        "rouge_l": 0.6835,
+        "retrieval_latency_ms": 9.466166840866208,
+        "prompt_tokens": 371,
+        "cost_usd": 5.565e-05
+      },
+      {
+        "query": "Describe the attention mechanism in Transformers.",
+        "target_doc_id": "topic_10",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9706,
+        "query_context_similarity": 0.5587,
+        "rouge_l": 0.725,
+        "retrieval_latency_ms": 9.167624870315194,
+        "prompt_tokens": 266,
+        "cost_usd": 3.99e-05
+      },
+      {
+        "query": "What is a vector database?",
+        "target_doc_id": "topic_11",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.698,
+        "rouge_l": 0.6349,
+        "retrieval_latency_ms": 29.88370810635388,
+        "prompt_tokens": 281,
+        "cost_usd": 4.215e-05
+      },
+      {
+        "query": "What does ROUGE score measure?",
+        "target_doc_id": "topic_12",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.6754,
+        "rouge_l": 0.625,
+        "retrieval_latency_ms": 8.198417024686933,
+        "prompt_tokens": 256,
+        "cost_usd": 3.84e-05
+      },
+      {
+        "query": "How does Reciprocal Rank Fusion (RRF) work?",
+        "target_doc_id": "topic_13",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9677,
+        "query_context_similarity": 0.6927,
+        "rouge_l": 0.7083,
+        "retrieval_latency_ms": 10.998417157679796,
+        "prompt_tokens": 294,
+        "cost_usd": 4.41e-05
+      },
+      {
+        "query": "What is the difference between extractive and abstractive summarization?",
+        "target_doc_id": "topic_14",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.7737,
+        "rouge_l": 0.6765,
+        "retrieval_latency_ms": 45.73679203167558,
+        "prompt_tokens": 377,
+        "cost_usd": 5.655e-05
+      },
+      {
+        "query": "What is zero-shot learning?",
+        "target_doc_id": "topic_15",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9706,
+        "query_context_similarity": 0.7821,
+        "rouge_l": 0.7294,
+        "retrieval_latency_ms": 12.378750136122108,
+        "prompt_tokens": 266,
+        "cost_usd": 3.99e-05
+      },
+      {
+        "query": "Why use chunking in RAG pipelines?",
+        "target_doc_id": "topic_16",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.4199,
+        "rouge_l": 0.7368,
+        "retrieval_latency_ms": 9.825874818488955,
+        "prompt_tokens": 377,
+        "cost_usd": 5.655e-05
+      },
+      {
+        "query": "What is the role of an embedding model?",
+        "target_doc_id": "topic_17",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.4944,
+        "rouge_l": 0.6377,
+        "retrieval_latency_ms": 13.17549985833466,
+        "prompt_tokens": 375,
+        "cost_usd": 5.625e-05
+      },
+      {
+        "query": "What is the context window in an LLM?",
+        "target_doc_id": "topic_18",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9688,
+        "query_context_similarity": 0.749,
+        "rouge_l": 0.7356,
+        "retrieval_latency_ms": 7.344334153458476,
+        "prompt_tokens": 374,
+        "cost_usd": 5.6099999999999995e-05
+      },
+      {
+        "query": "What is the purpose of temperature in text generation?",
+        "target_doc_id": "topic_19",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.963,
+        "query_context_similarity": 0.5434,
+        "rouge_l": 0.716,
+        "retrieval_latency_ms": 5.508749978616834,
+        "prompt_tokens": 396,
+        "cost_usd": 5.94e-05
+      }
+    ],
+    "metrics": {
+      "context_precision": 0.35,
+      "evidence_recall": 1.0,
+      "extractive_groundedness": 0.9847,
+      "query_context_similarity": 0.6617,
+      "rouge_l": 0.6319,
+      "retrieval_latency_ms": 18.42,
+      "avg_prompt_tokens": 319.1,
+      "cost_per_1k": 0.0479
+    },
+    "label": "Default Baseline",
+    "meets_sla": true
+  },
+  "random_search_mean": {
+    "label": "Random Search (Mean)",
+    "config": {
+      "note": "Mean over 12 unguided trials"
+    },
+    "metrics": {
+      "avg_prompt_tokens": 414.5,
+      "context_precision": 0.356,
+      "cost_per_1k": 0.0622,
+      "evidence_recall": 1.0,
+      "extractive_groundedness": 0.9844,
+      "query_context_similarity": 0.7551,
+      "retrieval_latency_ms": 26.0667,
+      "rouge_l": 0.6246
+    }
+  },
+  "random_search_best": {
+    "config": {
+      "chunking": {
+        "chunk_size": 256,
+        "overlap": 32,
+        "strategy": "fixed"
+      },
+      "retrieval": {
+        "strategy": "dense",
+        "top_k": 3
+      },
+      "embedding": {
+        "model_name": "all-MiniLM-L6-v2"
+      },
+      "reranker": {
+        "model_name": null
+      },
+      "generation": {
+        "model_name": "mistral"
+      }
+    },
+    "per_query": [
+      {
+        "query": "What is the capital of France?",
+        "target_doc_id": "topic_0",
+        "context_precision": 1.0,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.6956,
+        "rouge_l": 0.1587,
+        "retrieval_latency_ms": 6.099124904721975,
+        "prompt_tokens": 159,
+        "cost_usd": 2.385e-05
+      },
+      {
+        "query": "Explain quantum computing briefly.",
+        "target_doc_id": "topic_1",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.7196,
+        "rouge_l": 0.597,
+        "retrieval_latency_ms": 6.3611657824367285,
+        "prompt_tokens": 199,
+        "cost_usd": 2.9849999999999997e-05
+      },
+      {
+        "query": "Who wrote Hamlet?",
+        "target_doc_id": "topic_2",
+        "context_precision": 1.0,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9615,
+        "query_context_similarity": 0.6775,
+        "rouge_l": 0.1875,
+        "retrieval_latency_ms": 6.37054187245667,
+        "prompt_tokens": 142,
+        "cost_usd": 2.13e-05
+      },
+      {
+        "query": "What is Retrieval-Augmented Generation (RAG)?",
+        "target_doc_id": "topic_3",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9697,
+        "query_context_similarity": 0.7002,
+        "rouge_l": 0.7073,
+        "retrieval_latency_ms": 6.909542018547654,
+        "prompt_tokens": 197,
+        "cost_usd": 2.955e-05
+      },
+      {
+        "query": "What are dense embeddings?",
+        "target_doc_id": "topic_4",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9655,
+        "query_context_similarity": 0.6728,
+        "rouge_l": 0.597,
+        "retrieval_latency_ms": 5.401915870606899,
+        "prompt_tokens": 197,
+        "cost_usd": 2.955e-05
+      },
+      {
+        "query": "What does BM25 stand for?",
+        "target_doc_id": "topic_5",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.5564,
+        "rouge_l": 0.6824,
+        "retrieval_latency_ms": 6.4998341258615255,
+        "prompt_tokens": 195,
+        "cost_usd": 2.925e-05
+      },
+      {
+        "query": "What is Hybrid Search?",
+        "target_doc_id": "topic_6",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.5716,
+        "rouge_l": 0.7595,
+        "retrieval_latency_ms": 6.189542124047875,
+        "prompt_tokens": 138,
+        "cost_usd": 2.07e-05
+      },
+      {
+        "query": "What is LLM-as-a-judge?",
+        "target_doc_id": "topic_7",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.7375,
+        "rouge_l": 0.6747,
+        "retrieval_latency_ms": 5.373124964535236,
+        "prompt_tokens": 197,
+        "cost_usd": 2.955e-05
+      },
+      {
+        "query": "Explain what 'hallucination' means in the context of LLMs.",
+        "target_doc_id": "topic_8",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9714,
+        "query_context_similarity": 0.6872,
+        "rouge_l": 0.6377,
+        "retrieval_latency_ms": 6.050291936844587,
+        "prompt_tokens": 158,
+        "cost_usd": 2.37e-05
+      },
+      {
+        "query": "What is cosine similarity?",
+        "target_doc_id": "topic_9",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9615,
+        "query_context_similarity": 0.7629,
+        "rouge_l": 0.6585,
+        "retrieval_latency_ms": 5.747874965891242,
+        "prompt_tokens": 153,
+        "cost_usd": 2.295e-05
+      },
+      {
+        "query": "Describe the attention mechanism in Transformers.",
+        "target_doc_id": "topic_10",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9697,
+        "query_context_similarity": 0.5743,
+        "rouge_l": 0.725,
+        "retrieval_latency_ms": 5.275374976918101,
+        "prompt_tokens": 203,
+        "cost_usd": 3.0449999999999998e-05
+      },
+      {
+        "query": "What is a vector database?",
+        "target_doc_id": "topic_11",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.7458,
+        "rouge_l": 0.6349,
+        "retrieval_latency_ms": 5.523124942556024,
+        "prompt_tokens": 192,
+        "cost_usd": 2.88e-05
+      },
+      {
+        "query": "What does ROUGE score measure?",
+        "target_doc_id": "topic_12",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.963,
+        "query_context_similarity": 0.5914,
+        "rouge_l": 0.6173,
+        "retrieval_latency_ms": 5.425416864454746,
+        "prompt_tokens": 192,
+        "cost_usd": 2.88e-05
+      },
+      {
+        "query": "How does Reciprocal Rank Fusion (RRF) work?",
+        "target_doc_id": "topic_13",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.768,
+        "rouge_l": 0.85,
+        "retrieval_latency_ms": 5.170790944248438,
+        "prompt_tokens": 143,
+        "cost_usd": 2.145e-05
+      },
+      {
+        "query": "What is the difference between extractive and abstractive summarization?",
+        "target_doc_id": "topic_14",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.963,
+        "query_context_similarity": 0.7822,
+        "rouge_l": 0.6571,
+        "retrieval_latency_ms": 5.1408750005066395,
+        "prompt_tokens": 207,
+        "cost_usd": 3.1049999999999996e-05
+      },
+      {
+        "query": "What is zero-shot learning?",
+        "target_doc_id": "topic_15",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.8618,
+        "rouge_l": 0.775,
+        "retrieval_latency_ms": 9.588749846443534,
+        "prompt_tokens": 145,
+        "cost_usd": 2.175e-05
+      },
+      {
+        "query": "Why use chunking in RAG pipelines?",
+        "target_doc_id": "topic_16",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9697,
+        "query_context_similarity": 0.4068,
+        "rouge_l": 0.7273,
+        "retrieval_latency_ms": 24.150083074346185,
+        "prompt_tokens": 197,
+        "cost_usd": 2.955e-05
+      },
+      {
+        "query": "What is the role of an embedding model?",
+        "target_doc_id": "topic_17",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.5486,
+        "rouge_l": 0.3429,
+        "retrieval_latency_ms": 14.874042011797428,
+        "prompt_tokens": 201,
+        "cost_usd": 3.0149999999999998e-05
+      },
+      {
+        "query": "What is the context window in an LLM?",
+        "target_doc_id": "topic_18",
+        "context_precision": 0.6667,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.8268,
+        "rouge_l": 0.7805,
+        "retrieval_latency_ms": 10.470292065292597,
+        "prompt_tokens": 148,
+        "cost_usd": 2.2199999999999998e-05
+      },
+      {
+        "query": "What is the purpose of temperature in text generation?",
+        "target_doc_id": "topic_19",
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.6993,
+        "rouge_l": 0.7073,
+        "retrieval_latency_ms": 12.41508312523365,
+        "prompt_tokens": 205,
+        "cost_usd": 3.0749999999999995e-05
+      }
+    ],
+    "metrics": {
+      "context_precision": 0.6333,
+      "evidence_recall": 1.0,
+      "extractive_groundedness": 0.9848,
+      "query_context_similarity": 0.6793,
+      "rouge_l": 0.6239,
+      "retrieval_latency_ms": 7.95,
+      "avg_prompt_tokens": 178.4,
+      "cost_per_1k": 0.0268
+    },
+    "label": "Random Search (Best)",
+    "meets_sla": true
+  },
+  "ragos_optimized": {
+    "config": {
+      "chunking": {
+        "chunk_size": 256,
+        "overlap": 32,
+        "strategy": "fixed"
+      },
+      "retrieval": {
+        "strategy": "dense",
+        "top_k": 5
+      },
+      "embedding": {
+        "model_name": "BAAI/bge-small-en-v1.5"
+      },
+      "reranker": {
+        "model_name": null
+      },
+      "generation": {
+        "model_name": "gemini-1.5-flash"
+      }
+    },
+    "per_query": [
+      {
+        "query": "What is the capital of France?",
+        "target_doc_id": "topic_0",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.7741,
+        "rouge_l": 0.1587,
+        "retrieval_latency_ms": 11.203499976545572,
+        "prompt_tokens": 327,
+        "cost_usd": 4.905e-05
+      },
+      {
+        "query": "Explain quantum computing briefly.",
+        "target_doc_id": "topic_1",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.818,
+        "rouge_l": 0.597,
+        "retrieval_latency_ms": 8.941417094320059,
+        "prompt_tokens": 275,
+        "cost_usd": 4.125e-05
+      },
+      {
+        "query": "Who wrote Hamlet?",
+        "target_doc_id": "topic_2",
+        "context_precision": 0.6,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9615,
+        "query_context_similarity": 0.7366,
+        "rouge_l": 0.1875,
+        "retrieval_latency_ms": 7.9283330123871565,
+        "prompt_tokens": 212,
+        "cost_usd": 3.18e-05
+      },
+      {
+        "query": "What is Retrieval-Augmented Generation (RAG)?",
+        "target_doc_id": "topic_3",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.9488,
+        "rouge_l": 0.7342,
+        "retrieval_latency_ms": 7.33187492005527,
+        "prompt_tokens": 273,
+        "cost_usd": 4.095e-05
+      },
+      {
+        "query": "What are dense embeddings?",
+        "target_doc_id": "topic_4",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9655,
+        "query_context_similarity": 0.877,
+        "rouge_l": 0.597,
+        "retrieval_latency_ms": 8.1129998434335,
+        "prompt_tokens": 320,
+        "cost_usd": 4.8e-05
+      },
+      {
+        "query": "What does BM25 stand for?",
+        "target_doc_id": "topic_5",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.7951,
+        "rouge_l": 0.6744,
+        "retrieval_latency_ms": 7.58008286356926,
+        "prompt_tokens": 244,
+        "cost_usd": 3.6599999999999995e-05
+      },
+      {
+        "query": "What is Hybrid Search?",
+        "target_doc_id": "topic_6",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.8279,
+        "rouge_l": 0.7595,
+        "retrieval_latency_ms": 7.042750017717481,
+        "prompt_tokens": 161,
+        "cost_usd": 2.4149999999999997e-05
+      },
+      {
+        "query": "What is LLM-as-a-judge?",
+        "target_doc_id": "topic_7",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.8665,
+        "rouge_l": 0.6747,
+        "retrieval_latency_ms": 8.629332995042205,
+        "prompt_tokens": 318,
+        "cost_usd": 4.77e-05
+      },
+      {
+        "query": "Explain what 'hallucination' means in the context of LLMs.",
+        "target_doc_id": "topic_8",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.895,
+        "rouge_l": 0.6769,
+        "retrieval_latency_ms": 8.5697912145406,
+        "prompt_tokens": 233,
+        "cost_usd": 3.4949999999999996e-05
+      },
+      {
+        "query": "What is cosine similarity?",
+        "target_doc_id": "topic_9",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9615,
+        "query_context_similarity": 0.876,
+        "rouge_l": 0.6585,
+        "retrieval_latency_ms": 7.1477091405540705,
+        "prompt_tokens": 221,
+        "cost_usd": 3.315e-05
+      },
+      {
+        "query": "Describe the attention mechanism in Transformers.",
+        "target_doc_id": "topic_10",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9697,
+        "query_context_similarity": 0.825,
+        "rouge_l": 0.725,
+        "retrieval_latency_ms": 7.888749940320849,
+        "prompt_tokens": 279,
+        "cost_usd": 4.185e-05
+      },
+      {
+        "query": "What is a vector database?",
+        "target_doc_id": "topic_11",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.8927,
+        "rouge_l": 0.6349,
+        "retrieval_latency_ms": 7.7014591079205275,
+        "prompt_tokens": 296,
+        "cost_usd": 4.4399999999999995e-05
+      },
+      {
+        "query": "What does ROUGE score measure?",
+        "target_doc_id": "topic_12",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.963,
+        "query_context_similarity": 0.7791,
+        "rouge_l": 0.6173,
+        "retrieval_latency_ms": 6.981292041018605,
+        "prompt_tokens": 320,
+        "cost_usd": 4.8e-05
+      },
+      {
+        "query": "How does Reciprocal Rank Fusion (RRF) work?",
+        "target_doc_id": "topic_13",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.9054,
+        "rouge_l": 0.85,
+        "retrieval_latency_ms": 7.869707886129618,
+        "prompt_tokens": 214,
+        "cost_usd": 3.21e-05
+      },
+      {
+        "query": "What is the difference between extractive and abstractive summarization?",
+        "target_doc_id": "topic_14",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.963,
+        "query_context_similarity": 0.9179,
+        "rouge_l": 0.6571,
+        "retrieval_latency_ms": 7.122249808162451,
+        "prompt_tokens": 335,
+        "cost_usd": 5.0249999999999995e-05
+      },
+      {
+        "query": "What is zero-shot learning?",
+        "target_doc_id": "topic_15",
+        "context_precision": 0.2,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9706,
+        "query_context_similarity": 0.9087,
+        "rouge_l": 0.6966,
+        "retrieval_latency_ms": 8.135915966704488,
+        "prompt_tokens": 273,
+        "cost_usd": 4.095e-05
+      },
+      {
+        "query": "Why use chunking in RAG pipelines?",
+        "target_doc_id": "topic_16",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9706,
+        "query_context_similarity": 0.8237,
+        "rouge_l": 0.7089,
+        "retrieval_latency_ms": 7.5131249614059925,
+        "prompt_tokens": 305,
+        "cost_usd": 4.575e-05
+      },
+      {
+        "query": "What is the role of an embedding model?",
+        "target_doc_id": "topic_17",
+        "context_precision": 0.2,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 1.0,
+        "query_context_similarity": 0.7898,
+        "rouge_l": 0.6197,
+        "retrieval_latency_ms": 7.594624999910593,
+        "prompt_tokens": 328,
+        "cost_usd": 4.9199999999999997e-05
+      },
+      {
+        "query": "What is the context window in an LLM?",
+        "target_doc_id": "topic_18",
+        "context_precision": 0.2,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9706,
+        "query_context_similarity": 0.8798,
+        "rouge_l": 0.6809,
+        "retrieval_latency_ms": 7.8686249908059835,
+        "prompt_tokens": 270,
+        "cost_usd": 4.0499999999999995e-05
+      },
+      {
+        "query": "What is the purpose of temperature in text generation?",
+        "target_doc_id": "topic_19",
+        "context_precision": 0.4,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9655,
+        "query_context_similarity": 0.8345,
+        "rouge_l": 0.725,
+        "retrieval_latency_ms": 7.224542088806629,
+        "prompt_tokens": 332,
+        "cost_usd": 4.98e-05
+      }
+    ],
+    "metrics": {
+      "context_precision": 0.38,
+      "evidence_recall": 1.0,
+      "extractive_groundedness": 0.9831,
+      "query_context_similarity": 0.8486,
+      "rouge_l": 0.6317,
+      "retrieval_latency_ms": 7.92,
+      "avg_prompt_tokens": 276.8,
+      "cost_per_1k": 0.0415
+    },
+    "label": "RAGOS-Optimized",
+    "meets_sla": true
+  },
+  "all_random_trials": [
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 1024,
+          "overlap": 128,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "dense",
+          "top_k": 3
+        },
+        "embedding": {
+          "model_name": "all-MiniLM-L6-v2"
+        },
+        "reranker": {
+          "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        },
+        "generation": {
+          "model_name": "mistral"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9722,
+          "query_context_similarity": 0.6826,
+          "rouge_l": 0.1613,
+          "retrieval_latency_ms": 159.0044170152396,
+          "prompt_tokens": 379,
+          "cost_usd": 5.685e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.7279,
+          "rouge_l": 0.5714,
+          "retrieval_latency_ms": 65.60566718690097,
+          "prompt_tokens": 299,
+          "cost_usd": 4.485e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6298,
+          "rouge_l": 0.1846,
+          "retrieval_latency_ms": 123.17604199051857,
+          "prompt_tokens": 373,
+          "cost_usd": 5.595e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.69,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 68.81883298046887,
+          "prompt_tokens": 380,
+          "cost_usd": 5.6999999999999996e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.6838,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 54.19116700068116,
+          "prompt_tokens": 374,
+          "cost_usd": 5.6099999999999995e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6306,
+          "rouge_l": 0.6905,
+          "retrieval_latency_ms": 57.16100009158254,
+          "prompt_tokens": 362,
+          "cost_usd": 5.43e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5986,
+          "rouge_l": 0.7692,
+          "retrieval_latency_ms": 55.867958115413785,
+          "prompt_tokens": 372,
+          "cost_usd": 5.5799999999999994e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9714,
+          "query_context_similarity": 0.7403,
+          "rouge_l": 0.6829,
+          "retrieval_latency_ms": 89.06041597947478,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.973,
+          "query_context_similarity": 0.6985,
+          "rouge_l": 0.6567,
+          "retrieval_latency_ms": 613.5635839309543,
+          "prompt_tokens": 379,
+          "cost_usd": 5.685e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7648,
+          "rouge_l": 0.6835,
+          "retrieval_latency_ms": 30.747791985049844,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.5587,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 51.37000000104308,
+          "prompt_tokens": 395,
+          "cost_usd": 5.925e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.698,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 49.2721248883754,
+          "prompt_tokens": 357,
+          "cost_usd": 5.355e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6754,
+          "rouge_l": 0.625,
+          "retrieval_latency_ms": 27.035709004849195,
+          "prompt_tokens": 359,
+          "cost_usd": 5.3849999999999994e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9677,
+          "query_context_similarity": 0.6927,
+          "rouge_l": 0.7083,
+          "retrieval_latency_ms": 49.00483298115432,
+          "prompt_tokens": 375,
+          "cost_usd": 5.625e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7737,
+          "rouge_l": 0.6765,
+          "retrieval_latency_ms": 50.23141601122916,
+          "prompt_tokens": 398,
+          "cost_usd": 5.9699999999999994e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.7821,
+          "rouge_l": 0.7294,
+          "retrieval_latency_ms": 29.881957918405533,
+          "prompt_tokens": 388,
+          "cost_usd": 5.82e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.4199,
+          "rouge_l": 0.7368,
+          "retrieval_latency_ms": 67.70574999973178,
+          "prompt_tokens": 387,
+          "cost_usd": 5.8049999999999995e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.4944,
+          "rouge_l": 0.6377,
+          "retrieval_latency_ms": 67.9338751360774,
+          "prompt_tokens": 381,
+          "cost_usd": 5.715e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.749,
+          "rouge_l": 0.7356,
+          "retrieval_latency_ms": 48.99899987503886,
+          "prompt_tokens": 374,
+          "cost_usd": 5.6099999999999995e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.5434,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 27.583457995206118,
+          "prompt_tokens": 402,
+          "cost_usd": 6.0299999999999995e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9847,
+        "query_context_similarity": 0.6617,
+        "rouge_l": 0.6319,
+        "retrieval_latency_ms": 89.31,
+        "avg_prompt_tokens": 374.4,
+        "cost_per_1k": 0.0562
+      },
+      "label": "Random-1"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 256,
+          "overlap": 32,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "dense",
+          "top_k": 5
+        },
+        "embedding": {
+          "model_name": "all-MiniLM-L6-v2"
+        },
+        "reranker": {
+          "model_name": null
+        },
+        "generation": {
+          "model_name": "gemini-1.5-flash"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.6,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6956,
+          "rouge_l": 0.1587,
+          "retrieval_latency_ms": 5.591458873823285,
+          "prompt_tokens": 228,
+          "cost_usd": 3.42e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7196,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 5.647707963362336,
+          "prompt_tokens": 275,
+          "cost_usd": 4.125e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.6,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.6775,
+          "rouge_l": 0.1875,
+          "retrieval_latency_ms": 5.766416899859905,
+          "prompt_tokens": 212,
+          "cost_usd": 3.18e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.7002,
+          "rouge_l": 0.7073,
+          "retrieval_latency_ms": 5.459291860461235,
+          "prompt_tokens": 273,
+          "cost_usd": 4.095e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9655,
+          "query_context_similarity": 0.6728,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 6.087874993681908,
+          "prompt_tokens": 273,
+          "cost_usd": 4.095e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5564,
+          "rouge_l": 0.6824,
+          "retrieval_latency_ms": 5.480207968503237,
+          "prompt_tokens": 323,
+          "cost_usd": 4.845e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5716,
+          "rouge_l": 0.7595,
+          "retrieval_latency_ms": 6.0613329987972975,
+          "prompt_tokens": 220,
+          "cost_usd": 3.2999999999999996e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7375,
+          "rouge_l": 0.6747,
+          "retrieval_latency_ms": 10.387541027739644,
+          "prompt_tokens": 324,
+          "cost_usd": 4.8599999999999995e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9714,
+          "query_context_similarity": 0.6872,
+          "rouge_l": 0.6377,
+          "retrieval_latency_ms": 8.27258313074708,
+          "prompt_tokens": 286,
+          "cost_usd": 4.29e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.7629,
+          "rouge_l": 0.6585,
+          "retrieval_latency_ms": 11.22070918790996,
+          "prompt_tokens": 281,
+          "cost_usd": 4.215e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.5743,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 10.872500017285347,
+          "prompt_tokens": 279,
+          "cost_usd": 4.185e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7458,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 9.97787481173873,
+          "prompt_tokens": 291,
+          "cost_usd": 4.365e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.5914,
+          "rouge_l": 0.6173,
+          "retrieval_latency_ms": 7.465499918907881,
+          "prompt_tokens": 262,
+          "cost_usd": 3.93e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.768,
+          "rouge_l": 0.85,
+          "retrieval_latency_ms": 9.194917045533657,
+          "prompt_tokens": 214,
+          "cost_usd": 3.21e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7822,
+          "rouge_l": 0.6571,
+          "retrieval_latency_ms": 6.678959121927619,
+          "prompt_tokens": 335,
+          "cost_usd": 5.0249999999999995e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8618,
+          "rouge_l": 0.775,
+          "retrieval_latency_ms": 11.852083960548043,
+          "prompt_tokens": 273,
+          "cost_usd": 4.095e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.4068,
+          "rouge_l": 0.7273,
+          "retrieval_latency_ms": 7.572750095278025,
+          "prompt_tokens": 272,
+          "cost_usd": 4.0799999999999996e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5486,
+          "rouge_l": 0.3429,
+          "retrieval_latency_ms": 7.1878330782055855,
+          "prompt_tokens": 328,
+          "cost_usd": 4.9199999999999997e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8268,
+          "rouge_l": 0.7805,
+          "retrieval_latency_ms": 9.641290875151753,
+          "prompt_tokens": 276,
+          "cost_usd": 4.14e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6993,
+          "rouge_l": 0.7073,
+          "retrieval_latency_ms": 9.11066704429686,
+          "prompt_tokens": 330,
+          "cost_usd": 4.95e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.39,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9848,
+        "query_context_similarity": 0.6793,
+        "rouge_l": 0.6239,
+        "retrieval_latency_ms": 7.98,
+        "avg_prompt_tokens": 277.8,
+        "cost_per_1k": 0.0417
+      },
+      "label": "Random-2"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 256,
+          "overlap": 32,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "dense",
+          "top_k": 3
+        },
+        "embedding": {
+          "model_name": "all-MiniLM-L6-v2"
+        },
+        "reranker": {
+          "model_name": null
+        },
+        "generation": {
+          "model_name": "mistral"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 1.0,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6956,
+          "rouge_l": 0.1587,
+          "retrieval_latency_ms": 6.099124904721975,
+          "prompt_tokens": 159,
+          "cost_usd": 2.385e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7196,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 6.3611657824367285,
+          "prompt_tokens": 199,
+          "cost_usd": 2.9849999999999997e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 1.0,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.6775,
+          "rouge_l": 0.1875,
+          "retrieval_latency_ms": 6.37054187245667,
+          "prompt_tokens": 142,
+          "cost_usd": 2.13e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.7002,
+          "rouge_l": 0.7073,
+          "retrieval_latency_ms": 6.909542018547654,
+          "prompt_tokens": 197,
+          "cost_usd": 2.955e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9655,
+          "query_context_similarity": 0.6728,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 5.401915870606899,
+          "prompt_tokens": 197,
+          "cost_usd": 2.955e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5564,
+          "rouge_l": 0.6824,
+          "retrieval_latency_ms": 6.4998341258615255,
+          "prompt_tokens": 195,
+          "cost_usd": 2.925e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5716,
+          "rouge_l": 0.7595,
+          "retrieval_latency_ms": 6.189542124047875,
+          "prompt_tokens": 138,
+          "cost_usd": 2.07e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7375,
+          "rouge_l": 0.6747,
+          "retrieval_latency_ms": 5.373124964535236,
+          "prompt_tokens": 197,
+          "cost_usd": 2.955e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9714,
+          "query_context_similarity": 0.6872,
+          "rouge_l": 0.6377,
+          "retrieval_latency_ms": 6.050291936844587,
+          "prompt_tokens": 158,
+          "cost_usd": 2.37e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.7629,
+          "rouge_l": 0.6585,
+          "retrieval_latency_ms": 5.747874965891242,
+          "prompt_tokens": 153,
+          "cost_usd": 2.295e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.5743,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 5.275374976918101,
+          "prompt_tokens": 203,
+          "cost_usd": 3.0449999999999998e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7458,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 5.523124942556024,
+          "prompt_tokens": 192,
+          "cost_usd": 2.88e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.5914,
+          "rouge_l": 0.6173,
+          "retrieval_latency_ms": 5.425416864454746,
+          "prompt_tokens": 192,
+          "cost_usd": 2.88e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.768,
+          "rouge_l": 0.85,
+          "retrieval_latency_ms": 5.170790944248438,
+          "prompt_tokens": 143,
+          "cost_usd": 2.145e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7822,
+          "rouge_l": 0.6571,
+          "retrieval_latency_ms": 5.1408750005066395,
+          "prompt_tokens": 207,
+          "cost_usd": 3.1049999999999996e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8618,
+          "rouge_l": 0.775,
+          "retrieval_latency_ms": 9.588749846443534,
+          "prompt_tokens": 145,
+          "cost_usd": 2.175e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.4068,
+          "rouge_l": 0.7273,
+          "retrieval_latency_ms": 24.150083074346185,
+          "prompt_tokens": 197,
+          "cost_usd": 2.955e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5486,
+          "rouge_l": 0.3429,
+          "retrieval_latency_ms": 14.874042011797428,
+          "prompt_tokens": 201,
+          "cost_usd": 3.0149999999999998e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8268,
+          "rouge_l": 0.7805,
+          "retrieval_latency_ms": 10.470292065292597,
+          "prompt_tokens": 148,
+          "cost_usd": 2.2199999999999998e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6993,
+          "rouge_l": 0.7073,
+          "retrieval_latency_ms": 12.41508312523365,
+          "prompt_tokens": 205,
+          "cost_usd": 3.0749999999999995e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.6333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9848,
+        "query_context_similarity": 0.6793,
+        "rouge_l": 0.6239,
+        "retrieval_latency_ms": 7.95,
+        "avg_prompt_tokens": 178.4,
+        "cost_per_1k": 0.0268
+      },
+      "label": "Random-3"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 1024,
+          "overlap": 128,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "hybrid",
+          "top_k": 5
+        },
+        "embedding": {
+          "model_name": "all-MiniLM-L6-v2"
+        },
+        "reranker": {
+          "model_name": null
+        },
+        "generation": {
+          "model_name": "gemini-1.5-flash"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9722,
+          "query_context_similarity": 0.6826,
+          "rouge_l": 0.1613,
+          "retrieval_latency_ms": 11.877124896273017,
+          "prompt_tokens": 628,
+          "cost_usd": 9.42e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.7279,
+          "rouge_l": 0.5714,
+          "retrieval_latency_ms": 9.422208182513714,
+          "prompt_tokens": 290,
+          "cost_usd": 4.35e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6298,
+          "rouge_l": 0.1846,
+          "retrieval_latency_ms": 7.097875000908971,
+          "prompt_tokens": 620,
+          "cost_usd": 9.3e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.69,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 7.517416961491108,
+          "prompt_tokens": 624,
+          "cost_usd": 9.36e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.6838,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 6.711374968290329,
+          "prompt_tokens": 615,
+          "cost_usd": 9.224999999999999e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6306,
+          "rouge_l": 0.6905,
+          "retrieval_latency_ms": 6.846958072856069,
+          "prompt_tokens": 614,
+          "cost_usd": 9.21e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5986,
+          "rouge_l": 0.7692,
+          "retrieval_latency_ms": 7.82387494109571,
+          "prompt_tokens": 628,
+          "cost_usd": 9.42e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9714,
+          "query_context_similarity": 0.7403,
+          "rouge_l": 0.6829,
+          "retrieval_latency_ms": 7.54116615280509,
+          "prompt_tokens": 620,
+          "cost_usd": 9.3e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.973,
+          "query_context_similarity": 0.6985,
+          "rouge_l": 0.6567,
+          "retrieval_latency_ms": 6.357625126838684,
+          "prompt_tokens": 629,
+          "cost_usd": 9.434999999999999e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7648,
+          "rouge_l": 0.6835,
+          "retrieval_latency_ms": 7.265250198543072,
+          "prompt_tokens": 609,
+          "cost_usd": 9.135e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.5587,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 5.814292002469301,
+          "prompt_tokens": 621,
+          "cost_usd": 9.315e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.698,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 6.754458183422685,
+          "prompt_tokens": 533,
+          "cost_usd": 7.994999999999999e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6754,
+          "rouge_l": 0.625,
+          "retrieval_latency_ms": 11.598125100135803,
+          "prompt_tokens": 619,
+          "cost_usd": 9.285e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9677,
+          "query_context_similarity": 0.6927,
+          "rouge_l": 0.7083,
+          "retrieval_latency_ms": 11.713792104274035,
+          "prompt_tokens": 539,
+          "cost_usd": 8.085e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7737,
+          "rouge_l": 0.6765,
+          "retrieval_latency_ms": 7.416917011141777,
+          "prompt_tokens": 629,
+          "cost_usd": 9.434999999999999e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.7821,
+          "rouge_l": 0.7294,
+          "retrieval_latency_ms": 8.179167052730918,
+          "prompt_tokens": 633,
+          "cost_usd": 9.494999999999999e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.4199,
+          "rouge_l": 0.7368,
+          "retrieval_latency_ms": 8.636083919554949,
+          "prompt_tokens": 556,
+          "cost_usd": 8.34e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.4944,
+          "rouge_l": 0.6377,
+          "retrieval_latency_ms": 7.346374914050102,
+          "prompt_tokens": 617,
+          "cost_usd": 9.255e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.749,
+          "rouge_l": 0.7356,
+          "retrieval_latency_ms": 6.539708934724331,
+          "prompt_tokens": 626,
+          "cost_usd": 9.389999999999999e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.5434,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 7.9648750834167,
+          "prompt_tokens": 648,
+          "cost_usd": 9.719999999999999e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.2,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9847,
+        "query_context_similarity": 0.6617,
+        "rouge_l": 0.6319,
+        "retrieval_latency_ms": 8.02,
+        "avg_prompt_tokens": 594.9,
+        "cost_per_1k": 0.0892
+      },
+      "label": "Random-4"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 256,
+          "overlap": 32,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "hybrid",
+          "top_k": 3
+        },
+        "embedding": {
+          "model_name": "BAAI/bge-small-en-v1.5"
+        },
+        "reranker": {
+          "model_name": null
+        },
+        "generation": {
+          "model_name": "mistral"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7741,
+          "rouge_l": 0.1587,
+          "retrieval_latency_ms": 8.253625128418207,
+          "prompt_tokens": 151,
+          "cost_usd": 2.2649999999999998e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.818,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 8.15512496046722,
+          "prompt_tokens": 199,
+          "cost_usd": 2.9849999999999997e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 1.0,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.7366,
+          "rouge_l": 0.1875,
+          "retrieval_latency_ms": 7.532209157943726,
+          "prompt_tokens": 142,
+          "cost_usd": 2.13e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.946,
+          "rouge_l": 0.8056,
+          "retrieval_latency_ms": 8.060249965637922,
+          "prompt_tokens": 145,
+          "cost_usd": 2.175e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8828,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 15.48462500795722,
+          "prompt_tokens": 145,
+          "cost_usd": 2.175e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7951,
+          "rouge_l": 0.6744,
+          "retrieval_latency_ms": 11.564332991838455,
+          "prompt_tokens": 195,
+          "cost_usd": 2.925e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6739,
+          "rouge_l": 0.1081,
+          "retrieval_latency_ms": 9.443833027034998,
+          "prompt_tokens": 82,
+          "cost_usd": 1.2299999999999999e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8529,
+          "rouge_l": 0.6512,
+          "retrieval_latency_ms": 10.01841714605689,
+          "prompt_tokens": 197,
+          "cost_usd": 2.955e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8792,
+          "rouge_l": 0.6769,
+          "retrieval_latency_ms": 13.283666921779513,
+          "prompt_tokens": 158,
+          "cost_usd": 2.37e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8988,
+          "rouge_l": 0.675,
+          "retrieval_latency_ms": 12.93591596186161,
+          "prompt_tokens": 153,
+          "cost_usd": 2.295e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.825,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 10.246916906908154,
+          "prompt_tokens": 156,
+          "cost_usd": 2.34e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8927,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 12.668333016335964,
+          "prompt_tokens": 197,
+          "cost_usd": 2.955e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7791,
+          "rouge_l": 0.6173,
+          "retrieval_latency_ms": 13.527374947443604,
+          "prompt_tokens": 146,
+          "cost_usd": 2.19e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9054,
+          "rouge_l": 0.85,
+          "retrieval_latency_ms": 14.106832910329103,
+          "prompt_tokens": 143,
+          "cost_usd": 2.145e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.9179,
+          "rouge_l": 0.6571,
+          "retrieval_latency_ms": 11.829250026494265,
+          "prompt_tokens": 203,
+          "cost_usd": 3.0449999999999998e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.9087,
+          "rouge_l": 0.6966,
+          "retrieval_latency_ms": 14.00295807980001,
+          "prompt_tokens": 198,
+          "cost_usd": 2.97e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.973,
+          "query_context_similarity": 0.7614,
+          "rouge_l": 0.7089,
+          "retrieval_latency_ms": 12.499541975557804,
+          "prompt_tokens": 176,
+          "cost_usd": 2.6399999999999998e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7742,
+          "rouge_l": 0.3333,
+          "retrieval_latency_ms": 13.01312493160367,
+          "prompt_tokens": 200,
+          "cost_usd": 2.9999999999999997e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.8822,
+          "rouge_l": 0.7273,
+          "retrieval_latency_ms": 33.10066694393754,
+          "prompt_tokens": 200,
+          "cost_usd": 2.9999999999999997e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.96,
+          "query_context_similarity": 0.7464,
+          "rouge_l": 0.6905,
+          "retrieval_latency_ms": 11.958707822486758,
+          "prompt_tokens": 204,
+          "cost_usd": 3.06e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.55,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9865,
+        "query_context_similarity": 0.8325,
+        "rouge_l": 0.5905,
+        "retrieval_latency_ms": 12.58,
+        "avg_prompt_tokens": 169.5,
+        "cost_per_1k": 0.0254
+      },
+      "label": "Random-5"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 1024,
+          "overlap": 128,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "hybrid",
+          "top_k": 3
+        },
+        "embedding": {
+          "model_name": "BAAI/bge-small-en-v1.5"
+        },
+        "reranker": {
+          "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        },
+        "generation": {
+          "model_name": "mistral"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9722,
+          "query_context_similarity": 0.767,
+          "rouge_l": 0.1613,
+          "retrieval_latency_ms": 36.83370794169605,
+          "prompt_tokens": 383,
+          "cost_usd": 5.745e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.8177,
+          "rouge_l": 0.5714,
+          "retrieval_latency_ms": 29.749542009085417,
+          "prompt_tokens": 375,
+          "cost_usd": 5.625e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7269,
+          "rouge_l": 0.1846,
+          "retrieval_latency_ms": 28.041250072419643,
+          "prompt_tokens": 401,
+          "cost_usd": 6.015e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9419,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 48.72666695155203,
+          "prompt_tokens": 393,
+          "cost_usd": 5.8949999999999996e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.8859,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 31.559374881908298,
+          "prompt_tokens": 374,
+          "cost_usd": 5.6099999999999995e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7953,
+          "rouge_l": 0.6905,
+          "retrieval_latency_ms": 27.593665989115834,
+          "prompt_tokens": 354,
+          "cost_usd": 5.3099999999999996e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8327,
+          "rouge_l": 0.7692,
+          "retrieval_latency_ms": 32.67837502062321,
+          "prompt_tokens": 372,
+          "cost_usd": 5.5799999999999994e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9714,
+          "query_context_similarity": 0.8711,
+          "rouge_l": 0.6829,
+          "retrieval_latency_ms": 30.37658310495317,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.973,
+          "query_context_similarity": 0.8867,
+          "rouge_l": 0.6567,
+          "retrieval_latency_ms": 27.620292035862803,
+          "prompt_tokens": 379,
+          "cost_usd": 5.685e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8849,
+          "rouge_l": 0.6835,
+          "retrieval_latency_ms": 25.330916978418827,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.7985,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 44.10975007340312,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9068,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 30.511582968756557,
+          "prompt_tokens": 381,
+          "cost_usd": 5.715e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8078,
+          "rouge_l": 0.625,
+          "retrieval_latency_ms": 31.731917057186365,
+          "prompt_tokens": 359,
+          "cost_usd": 5.3849999999999994e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9677,
+          "query_context_similarity": 0.8341,
+          "rouge_l": 0.7083,
+          "retrieval_latency_ms": 41.172083001583815,
+          "prompt_tokens": 296,
+          "cost_usd": 4.4399999999999995e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9164,
+          "rouge_l": 0.6765,
+          "retrieval_latency_ms": 37.56008297204971,
+          "prompt_tokens": 398,
+          "cost_usd": 5.9699999999999994e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.9091,
+          "rouge_l": 0.7294,
+          "retrieval_latency_ms": 58.40104189701378,
+          "prompt_tokens": 388,
+          "cost_usd": 5.82e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7671,
+          "rouge_l": 0.7368,
+          "retrieval_latency_ms": 38.156916154548526,
+          "prompt_tokens": 387,
+          "cost_usd": 5.8049999999999995e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7926,
+          "rouge_l": 0.6377,
+          "retrieval_latency_ms": 30.022291000932455,
+          "prompt_tokens": 361,
+          "cost_usd": 5.4149999999999995e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.8529,
+          "rouge_l": 0.7356,
+          "retrieval_latency_ms": 30.518040992319584,
+          "prompt_tokens": 374,
+          "cost_usd": 5.6099999999999995e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7432,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 31.42116591334343,
+          "prompt_tokens": 398,
+          "cost_usd": 5.9699999999999994e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9847,
+        "query_context_similarity": 0.8369,
+        "rouge_l": 0.6319,
+        "retrieval_latency_ms": 34.61,
+        "avg_prompt_tokens": 375.2,
+        "cost_per_1k": 0.0563
+      },
+      "label": "Random-6"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 256,
+          "overlap": 32,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "dense",
+          "top_k": 10
+        },
+        "embedding": {
+          "model_name": "all-MiniLM-L6-v2"
+        },
+        "reranker": {
+          "model_name": null
+        },
+        "generation": {
+          "model_name": "gemini-1.5-flash"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.3,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6956,
+          "rouge_l": 0.1587,
+          "retrieval_latency_ms": 6.757416063919663,
+          "prompt_tokens": 432,
+          "cost_usd": 6.48e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7196,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 6.161291152238846,
+          "prompt_tokens": 544,
+          "cost_usd": 8.159999999999999e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.3,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.6775,
+          "rouge_l": 0.1875,
+          "retrieval_latency_ms": 5.8887910563498735,
+          "prompt_tokens": 436,
+          "cost_usd": 6.539999999999999e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.7002,
+          "rouge_l": 0.7073,
+          "retrieval_latency_ms": 5.764750065281987,
+          "prompt_tokens": 590,
+          "cost_usd": 8.85e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9655,
+          "query_context_similarity": 0.6728,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 5.486291134729981,
+          "prompt_tokens": 560,
+          "cost_usd": 8.4e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5564,
+          "rouge_l": 0.6824,
+          "retrieval_latency_ms": 5.428333068266511,
+          "prompt_tokens": 516,
+          "cost_usd": 7.74e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5716,
+          "rouge_l": 0.7595,
+          "retrieval_latency_ms": 5.593583919107914,
+          "prompt_tokens": 437,
+          "cost_usd": 6.555e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7375,
+          "rouge_l": 0.6747,
+          "retrieval_latency_ms": 5.448584211990237,
+          "prompt_tokens": 486,
+          "cost_usd": 7.29e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9714,
+          "query_context_similarity": 0.6872,
+          "rouge_l": 0.6377,
+          "retrieval_latency_ms": 5.719457985833287,
+          "prompt_tokens": 481,
+          "cost_usd": 7.214999999999999e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.7629,
+          "rouge_l": 0.6585,
+          "retrieval_latency_ms": 5.109291058033705,
+          "prompt_tokens": 478,
+          "cost_usd": 7.17e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.5743,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 5.0394581630826,
+          "prompt_tokens": 522,
+          "cost_usd": 7.829999999999999e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7458,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 4.953416995704174,
+          "prompt_tokens": 550,
+          "cost_usd": 8.25e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.5914,
+          "rouge_l": 0.6173,
+          "retrieval_latency_ms": 4.970708163455129,
+          "prompt_tokens": 390,
+          "cost_usd": 5.85e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.768,
+          "rouge_l": 0.85,
+          "retrieval_latency_ms": 4.788875114172697,
+          "prompt_tokens": 467,
+          "cost_usd": 7.005e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7822,
+          "rouge_l": 0.6571,
+          "retrieval_latency_ms": 4.821583861485124,
+          "prompt_tokens": 655,
+          "cost_usd": 9.824999999999999e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8618,
+          "rouge_l": 0.775,
+          "retrieval_latency_ms": 5.201958119869232,
+          "prompt_tokens": 445,
+          "cost_usd": 6.675e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.4068,
+          "rouge_l": 0.7273,
+          "retrieval_latency_ms": 5.022624973207712,
+          "prompt_tokens": 535,
+          "cost_usd": 8.025e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5486,
+          "rouge_l": 0.3429,
+          "retrieval_latency_ms": 4.953499883413315,
+          "prompt_tokens": 536,
+          "cost_usd": 8.04e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8268,
+          "rouge_l": 0.7805,
+          "retrieval_latency_ms": 4.897958133369684,
+          "prompt_tokens": 511,
+          "cost_usd": 7.664999999999999e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6993,
+          "rouge_l": 0.7073,
+          "retrieval_latency_ms": 5.127042066305876,
+          "prompt_tokens": 647,
+          "cost_usd": 9.705e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.21,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9848,
+        "query_context_similarity": 0.6793,
+        "rouge_l": 0.6239,
+        "retrieval_latency_ms": 5.36,
+        "avg_prompt_tokens": 510.9,
+        "cost_per_1k": 0.0766
+      },
+      "label": "Random-7"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 256,
+          "overlap": 32,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "dense",
+          "top_k": 10
+        },
+        "embedding": {
+          "model_name": "BAAI/bge-small-en-v1.5"
+        },
+        "reranker": {
+          "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        },
+        "generation": {
+          "model_name": "phi3"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.3,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7741,
+          "rouge_l": 0.1587,
+          "retrieval_latency_ms": 66.52870890684426,
+          "prompt_tokens": 438,
+          "cost_usd": 6.57e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.3,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.818,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 51.74795910716057,
+          "prompt_tokens": 442,
+          "cost_usd": 6.63e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.3,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.7366,
+          "rouge_l": 0.1875,
+          "retrieval_latency_ms": 53.30958287231624,
+          "prompt_tokens": 484,
+          "cost_usd": 7.26e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9488,
+          "rouge_l": 0.7342,
+          "retrieval_latency_ms": 51.67741607874632,
+          "prompt_tokens": 544,
+          "cost_usd": 8.159999999999999e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9655,
+          "query_context_similarity": 0.877,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 57.0222910027951,
+          "prompt_tokens": 585,
+          "cost_usd": 8.774999999999999e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7951,
+          "rouge_l": 0.6744,
+          "retrieval_latency_ms": 55.77662494033575,
+          "prompt_tokens": 561,
+          "cost_usd": 8.415e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.3,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8279,
+          "rouge_l": 0.7595,
+          "retrieval_latency_ms": 40.17650010064244,
+          "prompt_tokens": 473,
+          "cost_usd": 7.095e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.86,
+          "rouge_l": 0.6588,
+          "retrieval_latency_ms": 64.39858302474022,
+          "prompt_tokens": 580,
+          "cost_usd": 8.7e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9722,
+          "query_context_similarity": 0.87,
+          "rouge_l": 0.6027,
+          "retrieval_latency_ms": 60.89966697618365,
+          "prompt_tokens": 553,
+          "cost_usd": 8.295e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.876,
+          "rouge_l": 0.6585,
+          "retrieval_latency_ms": 61.295917024835944,
+          "prompt_tokens": 541,
+          "cost_usd": 8.115e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.3,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.825,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 60.50516711547971,
+          "prompt_tokens": 486,
+          "cost_usd": 7.29e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8927,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 63.366834074258804,
+          "prompt_tokens": 611,
+          "cost_usd": 9.164999999999999e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7791,
+          "rouge_l": 0.6173,
+          "retrieval_latency_ms": 90.58216586709023,
+          "prompt_tokens": 533,
+          "cost_usd": 7.994999999999999e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8334,
+          "rouge_l": 0.6939,
+          "retrieval_latency_ms": 67.20854109153152,
+          "prompt_tokens": 454,
+          "cost_usd": 6.81e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.9179,
+          "rouge_l": 0.6571,
+          "retrieval_latency_ms": 45.42000009678304,
+          "prompt_tokens": 492,
+          "cost_usd": 7.379999999999999e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.9087,
+          "rouge_l": 0.6966,
+          "retrieval_latency_ms": 61.71124987304211,
+          "prompt_tokens": 529,
+          "cost_usd": 7.934999999999999e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.8237,
+          "rouge_l": 0.7089,
+          "retrieval_latency_ms": 66.72066682949662,
+          "prompt_tokens": 586,
+          "cost_usd": 8.79e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7979,
+          "rouge_l": 0.6027,
+          "retrieval_latency_ms": 43.0395829025656,
+          "prompt_tokens": 642,
+          "cost_usd": 9.63e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.8681,
+          "rouge_l": 0.7356,
+          "retrieval_latency_ms": 65.58795808814466,
+          "prompt_tokens": 596,
+          "cost_usd": 8.939999999999999e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8097,
+          "rouge_l": 0.7073,
+          "retrieval_latency_ms": 41.77783406339586,
+          "prompt_tokens": 590,
+          "cost_usd": 8.85e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.225,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9819,
+        "query_context_similarity": 0.842,
+        "rouge_l": 0.6204,
+        "retrieval_latency_ms": 58.44,
+        "avg_prompt_tokens": 536.0,
+        "cost_per_1k": 0.0804
+      },
+      "label": "Random-8"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 1024,
+          "overlap": 128,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "hybrid",
+          "top_k": 3
+        },
+        "embedding": {
+          "model_name": "all-MiniLM-L6-v2"
+        },
+        "reranker": {
+          "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        },
+        "generation": {
+          "model_name": "phi3"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9722,
+          "query_context_similarity": 0.6826,
+          "rouge_l": 0.1613,
+          "retrieval_latency_ms": 33.62337499856949,
+          "prompt_tokens": 383,
+          "cost_usd": 5.745e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.7279,
+          "rouge_l": 0.5714,
+          "retrieval_latency_ms": 26.83145902119577,
+          "prompt_tokens": 299,
+          "cost_usd": 4.485e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6298,
+          "rouge_l": 0.1846,
+          "retrieval_latency_ms": 29.133333126083016,
+          "prompt_tokens": 373,
+          "cost_usd": 5.595e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.69,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 26.264958083629608,
+          "prompt_tokens": 380,
+          "cost_usd": 5.6999999999999996e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.6838,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 27.583624934777617,
+          "prompt_tokens": 374,
+          "cost_usd": 5.6099999999999995e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6306,
+          "rouge_l": 0.6905,
+          "retrieval_latency_ms": 26.36283403262496,
+          "prompt_tokens": 354,
+          "cost_usd": 5.3099999999999996e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.5986,
+          "rouge_l": 0.7692,
+          "retrieval_latency_ms": 29.40908307209611,
+          "prompt_tokens": 372,
+          "cost_usd": 5.5799999999999994e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9714,
+          "query_context_similarity": 0.7403,
+          "rouge_l": 0.6829,
+          "retrieval_latency_ms": 29.233291978016496,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.973,
+          "query_context_similarity": 0.6985,
+          "rouge_l": 0.6567,
+          "retrieval_latency_ms": 29.5928749255836,
+          "prompt_tokens": 379,
+          "cost_usd": 5.685e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7648,
+          "rouge_l": 0.6835,
+          "retrieval_latency_ms": 27.157458011060953,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.5587,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 28.393917018547654,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.698,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 29.439209029078484,
+          "prompt_tokens": 357,
+          "cost_usd": 5.355e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.6754,
+          "rouge_l": 0.625,
+          "retrieval_latency_ms": 28.03308400325477,
+          "prompt_tokens": 359,
+          "cost_usd": 5.3849999999999994e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9677,
+          "query_context_similarity": 0.6927,
+          "rouge_l": 0.7083,
+          "retrieval_latency_ms": 32.22158411517739,
+          "prompt_tokens": 377,
+          "cost_usd": 5.655e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7737,
+          "rouge_l": 0.6765,
+          "retrieval_latency_ms": 33.03862502798438,
+          "prompt_tokens": 380,
+          "cost_usd": 5.6999999999999996e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.7821,
+          "rouge_l": 0.7294,
+          "retrieval_latency_ms": 32.33416588045657,
+          "prompt_tokens": 388,
+          "cost_usd": 5.82e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.4199,
+          "rouge_l": 0.7368,
+          "retrieval_latency_ms": 46.75425007008016,
+          "prompt_tokens": 387,
+          "cost_usd": 5.8049999999999995e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.4944,
+          "rouge_l": 0.6377,
+          "retrieval_latency_ms": 42.38674999214709,
+          "prompt_tokens": 381,
+          "cost_usd": 5.715e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.749,
+          "rouge_l": 0.7356,
+          "retrieval_latency_ms": 39.13862514309585,
+          "prompt_tokens": 374,
+          "cost_usd": 5.6099999999999995e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.5434,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 36.43391700461507,
+          "prompt_tokens": 402,
+          "cost_usd": 6.0299999999999995e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.3333,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9847,
+        "query_context_similarity": 0.6617,
+        "rouge_l": 0.6319,
+        "retrieval_latency_ms": 31.67,
+        "avg_prompt_tokens": 372.5,
+        "cost_per_1k": 0.0559
+      },
+      "label": "Random-9"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 1024,
+          "overlap": 128,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "dense",
+          "top_k": 10
+        },
+        "embedding": {
+          "model_name": "BAAI/bge-small-en-v1.5"
+        },
+        "reranker": {
+          "model_name": null
+        },
+        "generation": {
+          "model_name": "phi3"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9722,
+          "query_context_similarity": 0.767,
+          "rouge_l": 0.1613,
+          "retrieval_latency_ms": 12.472999980673194,
+          "prompt_tokens": 1252,
+          "cost_usd": 0.00018779999999999998
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.8177,
+          "rouge_l": 0.5714,
+          "retrieval_latency_ms": 11.504041962325573,
+          "prompt_tokens": 1083,
+          "cost_usd": 0.00016245
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7269,
+          "rouge_l": 0.1846,
+          "retrieval_latency_ms": 9.974207961931825,
+          "prompt_tokens": 1255,
+          "cost_usd": 0.00018825
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9419,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 9.810250019654632,
+          "prompt_tokens": 1169,
+          "cost_usd": 0.00017534999999999998
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.8859,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 9.387166937813163,
+          "prompt_tokens": 1088,
+          "cost_usd": 0.00016319999999999998
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7953,
+          "rouge_l": 0.6905,
+          "retrieval_latency_ms": 8.341499837115407,
+          "prompt_tokens": 969,
+          "cost_usd": 0.00014534999999999998
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8327,
+          "rouge_l": 0.7692,
+          "retrieval_latency_ms": 7.766790920868516,
+          "prompt_tokens": 1156,
+          "cost_usd": 0.00017339999999999999
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9714,
+          "query_context_similarity": 0.8711,
+          "rouge_l": 0.6829,
+          "retrieval_latency_ms": 7.963958894833922,
+          "prompt_tokens": 1070,
+          "cost_usd": 0.0001605
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.973,
+          "query_context_similarity": 0.8867,
+          "rouge_l": 0.6567,
+          "retrieval_latency_ms": 8.53450014255941,
+          "prompt_tokens": 1170,
+          "cost_usd": 0.00017549999999999998
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8849,
+          "rouge_l": 0.6835,
+          "retrieval_latency_ms": 10.830667102709413,
+          "prompt_tokens": 1143,
+          "cost_usd": 0.00017145
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.7985,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 7.571417139843106,
+          "prompt_tokens": 1000,
+          "cost_usd": 0.00015
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9068,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 8.897333173081279,
+          "prompt_tokens": 1082,
+          "cost_usd": 0.0001623
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8078,
+          "rouge_l": 0.625,
+          "retrieval_latency_ms": 7.2498328518122435,
+          "prompt_tokens": 1156,
+          "cost_usd": 0.00017339999999999999
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9677,
+          "query_context_similarity": 0.8341,
+          "rouge_l": 0.7083,
+          "retrieval_latency_ms": 9.212624980136752,
+          "prompt_tokens": 988,
+          "cost_usd": 0.0001482
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9164,
+          "rouge_l": 0.6765,
+          "retrieval_latency_ms": 7.340000011026859,
+          "prompt_tokens": 1176,
+          "cost_usd": 0.0001764
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.9091,
+          "rouge_l": 0.7294,
+          "retrieval_latency_ms": 9.296166012063622,
+          "prompt_tokens": 1182,
+          "cost_usd": 0.0001773
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7671,
+          "rouge_l": 0.7368,
+          "retrieval_latency_ms": 8.545457851141691,
+          "prompt_tokens": 926,
+          "cost_usd": 0.0001389
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7926,
+          "rouge_l": 0.6377,
+          "retrieval_latency_ms": 8.465457940474153,
+          "prompt_tokens": 1168,
+          "cost_usd": 0.0001752
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9688,
+          "query_context_similarity": 0.8529,
+          "rouge_l": 0.7356,
+          "retrieval_latency_ms": 8.3165830001235,
+          "prompt_tokens": 1159,
+          "cost_usd": 0.00017385
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.1,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7432,
+          "rouge_l": 0.716,
+          "retrieval_latency_ms": 7.380415918305516,
+          "prompt_tokens": 1245,
+          "cost_usd": 0.00018674999999999999
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.1,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9847,
+        "query_context_similarity": 0.8369,
+        "rouge_l": 0.6319,
+        "retrieval_latency_ms": 8.94,
+        "avg_prompt_tokens": 1121.8,
+        "cost_per_1k": 0.1683
+      },
+      "label": "Random-10"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 256,
+          "overlap": 32,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "dense",
+          "top_k": 5
+        },
+        "embedding": {
+          "model_name": "BAAI/bge-small-en-v1.5"
+        },
+        "reranker": {
+          "model_name": null
+        },
+        "generation": {
+          "model_name": "mistral"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7741,
+          "rouge_l": 0.1587,
+          "retrieval_latency_ms": 11.661208001896739,
+          "prompt_tokens": 327,
+          "cost_usd": 4.905e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.818,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 10.364499874413013,
+          "prompt_tokens": 275,
+          "cost_usd": 4.125e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.6,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.7366,
+          "rouge_l": 0.1875,
+          "retrieval_latency_ms": 8.055959129706025,
+          "prompt_tokens": 212,
+          "cost_usd": 3.18e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9488,
+          "rouge_l": 0.7342,
+          "retrieval_latency_ms": 7.4922500643879175,
+          "prompt_tokens": 273,
+          "cost_usd": 4.095e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9655,
+          "query_context_similarity": 0.877,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 7.720875088125467,
+          "prompt_tokens": 320,
+          "cost_usd": 4.8e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7951,
+          "rouge_l": 0.6744,
+          "retrieval_latency_ms": 8.080166997388005,
+          "prompt_tokens": 244,
+          "cost_usd": 3.6599999999999995e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8279,
+          "rouge_l": 0.7595,
+          "retrieval_latency_ms": 6.803957978263497,
+          "prompt_tokens": 161,
+          "cost_usd": 2.4149999999999997e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8665,
+          "rouge_l": 0.6747,
+          "retrieval_latency_ms": 7.767834002152085,
+          "prompt_tokens": 318,
+          "cost_usd": 4.77e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.895,
+          "rouge_l": 0.6769,
+          "retrieval_latency_ms": 7.554874988272786,
+          "prompt_tokens": 233,
+          "cost_usd": 3.4949999999999996e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.876,
+          "rouge_l": 0.6585,
+          "retrieval_latency_ms": 7.4569168500602245,
+          "prompt_tokens": 221,
+          "cost_usd": 3.315e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.825,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 7.113999919965863,
+          "prompt_tokens": 279,
+          "cost_usd": 4.185e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8927,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 6.781791802495718,
+          "prompt_tokens": 296,
+          "cost_usd": 4.4399999999999995e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7791,
+          "rouge_l": 0.6173,
+          "retrieval_latency_ms": 6.715124938637018,
+          "prompt_tokens": 320,
+          "cost_usd": 4.8e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9054,
+          "rouge_l": 0.85,
+          "retrieval_latency_ms": 7.742417044937611,
+          "prompt_tokens": 214,
+          "cost_usd": 3.21e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.9179,
+          "rouge_l": 0.6571,
+          "retrieval_latency_ms": 7.200124906376004,
+          "prompt_tokens": 335,
+          "cost_usd": 5.0249999999999995e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.9087,
+          "rouge_l": 0.6966,
+          "retrieval_latency_ms": 6.9779581390321255,
+          "prompt_tokens": 273,
+          "cost_usd": 4.095e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.8237,
+          "rouge_l": 0.7089,
+          "retrieval_latency_ms": 7.329083047807217,
+          "prompt_tokens": 305,
+          "cost_usd": 4.575e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7898,
+          "rouge_l": 0.6197,
+          "retrieval_latency_ms": 7.585916901007295,
+          "prompt_tokens": 328,
+          "cost_usd": 4.9199999999999997e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.2,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.8798,
+          "rouge_l": 0.6809,
+          "retrieval_latency_ms": 8.12879204750061,
+          "prompt_tokens": 270,
+          "cost_usd": 4.0499999999999995e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.4,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9655,
+          "query_context_similarity": 0.8345,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 7.114833919331431,
+          "prompt_tokens": 332,
+          "cost_usd": 4.98e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.38,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9831,
+        "query_context_similarity": 0.8486,
+        "rouge_l": 0.6317,
+        "retrieval_latency_ms": 7.78,
+        "avg_prompt_tokens": 276.8,
+        "cost_per_1k": 0.0415
+      },
+      "label": "Random-11"
+    },
+    {
+      "config": {
+        "chunking": {
+          "chunk_size": 256,
+          "overlap": 32,
+          "strategy": "fixed"
+        },
+        "retrieval": {
+          "strategy": "hybrid",
+          "top_k": 3
+        },
+        "embedding": {
+          "model_name": "BAAI/bge-small-en-v1.5"
+        },
+        "reranker": {
+          "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        },
+        "generation": {
+          "model_name": "gpt-4o"
+        }
+      },
+      "per_query": [
+        {
+          "query": "What is the capital of France?",
+          "target_doc_id": "topic_0",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7741,
+          "rouge_l": 0.1587,
+          "retrieval_latency_ms": 46.6843331232667,
+          "prompt_tokens": 199,
+          "cost_usd": 2.9849999999999997e-05
+        },
+        {
+          "query": "Explain quantum computing briefly.",
+          "target_doc_id": "topic_1",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.818,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 36.88575001433492,
+          "prompt_tokens": 147,
+          "cost_usd": 2.205e-05
+        },
+        {
+          "query": "Who wrote Hamlet?",
+          "target_doc_id": "topic_2",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.7366,
+          "rouge_l": 0.1875,
+          "retrieval_latency_ms": 34.564957953989506,
+          "prompt_tokens": 137,
+          "cost_usd": 2.0549999999999998e-05
+        },
+        {
+          "query": "What is Retrieval-Augmented Generation (RAG)?",
+          "target_doc_id": "topic_3",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.9488,
+          "rouge_l": 0.7342,
+          "retrieval_latency_ms": 33.97383284755051,
+          "prompt_tokens": 197,
+          "cost_usd": 2.955e-05
+        },
+        {
+          "query": "What are dense embeddings?",
+          "target_doc_id": "topic_4",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9655,
+          "query_context_similarity": 0.877,
+          "rouge_l": 0.597,
+          "retrieval_latency_ms": 37.540958961471915,
+          "prompt_tokens": 192,
+          "cost_usd": 2.88e-05
+        },
+        {
+          "query": "What does BM25 stand for?",
+          "target_doc_id": "topic_5",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7951,
+          "rouge_l": 0.6744,
+          "retrieval_latency_ms": 35.4337920434773,
+          "prompt_tokens": 195,
+          "cost_usd": 2.925e-05
+        },
+        {
+          "query": "What is Hybrid Search?",
+          "target_doc_id": "topic_6",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8279,
+          "rouge_l": 0.7595,
+          "retrieval_latency_ms": 41.85691708698869,
+          "prompt_tokens": 148,
+          "cost_usd": 2.2199999999999998e-05
+        },
+        {
+          "query": "What is LLM-as-a-judge?",
+          "target_doc_id": "topic_7",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.86,
+          "rouge_l": 0.6588,
+          "retrieval_latency_ms": 42.141665937379,
+          "prompt_tokens": 197,
+          "cost_usd": 2.955e-05
+        },
+        {
+          "query": "Explain what 'hallucination' means in the context of LLMs.",
+          "target_doc_id": "topic_8",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9722,
+          "query_context_similarity": 0.87,
+          "rouge_l": 0.6027,
+          "retrieval_latency_ms": 45.012874994426966,
+          "prompt_tokens": 205,
+          "cost_usd": 3.0749999999999995e-05
+        },
+        {
+          "query": "What is cosine similarity?",
+          "target_doc_id": "topic_9",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9615,
+          "query_context_similarity": 0.876,
+          "rouge_l": 0.6585,
+          "retrieval_latency_ms": 27.130791917443275,
+          "prompt_tokens": 153,
+          "cost_usd": 2.295e-05
+        },
+        {
+          "query": "Describe the attention mechanism in Transformers.",
+          "target_doc_id": "topic_10",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.825,
+          "rouge_l": 0.725,
+          "retrieval_latency_ms": 27.06237486563623,
+          "prompt_tokens": 203,
+          "cost_usd": 3.0449999999999998e-05
+        },
+        {
+          "query": "What is a vector database?",
+          "target_doc_id": "topic_11",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8927,
+          "rouge_l": 0.6349,
+          "retrieval_latency_ms": 51.811874844133854,
+          "prompt_tokens": 192,
+          "cost_usd": 2.88e-05
+        },
+        {
+          "query": "What does ROUGE score measure?",
+          "target_doc_id": "topic_12",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.7791,
+          "rouge_l": 0.6173,
+          "retrieval_latency_ms": 43.826833134517074,
+          "prompt_tokens": 192,
+          "cost_usd": 2.88e-05
+        },
+        {
+          "query": "How does Reciprocal Rank Fusion (RRF) work?",
+          "target_doc_id": "topic_13",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8334,
+          "rouge_l": 0.6939,
+          "retrieval_latency_ms": 50.25179102085531,
+          "prompt_tokens": 143,
+          "cost_usd": 2.145e-05
+        },
+        {
+          "query": "What is the difference between extractive and abstractive summarization?",
+          "target_doc_id": "topic_14",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.963,
+          "query_context_similarity": 0.9179,
+          "rouge_l": 0.6571,
+          "retrieval_latency_ms": 57.13275005109608,
+          "prompt_tokens": 209,
+          "cost_usd": 3.1349999999999996e-05
+        },
+        {
+          "query": "What is zero-shot learning?",
+          "target_doc_id": "topic_15",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8949,
+          "rouge_l": 0.7126,
+          "retrieval_latency_ms": 23.34379218518734,
+          "prompt_tokens": 198,
+          "cost_usd": 2.97e-05
+        },
+        {
+          "query": "Why use chunking in RAG pipelines?",
+          "target_doc_id": "topic_16",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9706,
+          "query_context_similarity": 0.8237,
+          "rouge_l": 0.7089,
+          "retrieval_latency_ms": 45.98599998280406,
+          "prompt_tokens": 199,
+          "cost_usd": 2.9849999999999997e-05
+        },
+        {
+          "query": "What is the role of an embedding model?",
+          "target_doc_id": "topic_17",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.7979,
+          "rouge_l": 0.6027,
+          "retrieval_latency_ms": 43.283999897539616,
+          "prompt_tokens": 200,
+          "cost_usd": 2.9999999999999997e-05
+        },
+        {
+          "query": "What is the context window in an LLM?",
+          "target_doc_id": "topic_18",
+          "context_precision": 0.3333,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 0.9697,
+          "query_context_similarity": 0.8681,
+          "rouge_l": 0.7356,
+          "retrieval_latency_ms": 26.627209037542343,
+          "prompt_tokens": 200,
+          "cost_usd": 2.9999999999999997e-05
+        },
+        {
+          "query": "What is the purpose of temperature in text generation?",
+          "target_doc_id": "topic_19",
+          "context_precision": 0.6667,
+          "evidence_recall": 1.0,
+          "extractive_groundedness": 1.0,
+          "query_context_similarity": 0.8097,
+          "rouge_l": 0.7073,
+          "retrieval_latency_ms": 52.68408288247883,
+          "prompt_tokens": 205,
+          "cost_usd": 3.0749999999999995e-05
+        }
+      ],
+      "metrics": {
+        "context_precision": 0.5834,
+        "evidence_recall": 1.0,
+        "extractive_groundedness": 0.9834,
+        "query_context_similarity": 0.8413,
+        "rouge_l": 0.6212,
+        "retrieval_latency_ms": 40.16,
+        "avg_prompt_tokens": 185.6,
+        "cost_per_1k": 0.0278
+      },
+      "label": "Random-12"
+    }
+  ],
+  "pareto_frontier_labels": [
+    "Random-12",
+    "Random-5",
+    "Random Search (Best)",
+    "Random-7",
+    "Random-3",
+    "Random-11"
+  ],
+  "objectives": {
+    "context_precision": "maximize",
+    "evidence_recall": "maximize",
+    "query_context_similarity": "maximize",
+    "retrieval_latency_ms": "minimize",
+    "cost_per_1k": "minimize"
+  }
+}
